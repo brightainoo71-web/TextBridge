@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block title %}SMS Campaigns | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2">
+            <h4 class="fw-bold mb-0 text-dark tracking-tight">Campaign Broadcasts</h4>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-mono">{{ campaigns.count }} campaigns</span>
+        </div>
+        <p class="text-secondary small mb-0 mt-1">Multi-channel SMS dispatches across Ghana telco networks (MTN, Telecel, AT)</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'analytics:export_report' report_type='campaigns' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1.5">
+            <i class="bi bi-download"></i> Export History
+        </a>
+        <a href="{% url 'messaging:single_message' %}" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1.5">
+            <i class="bi bi-chat-dots"></i> Quick Single SMS
+        </a>
+        <a href="{% url 'messaging:campaign_create' %}" class="btn btn-primary btn-sm d-flex align-items-center gap-1.5 shadow-sm">
+            <i class="bi bi-send-plus-fill"></i> New Campaign
+        </a>
+    </div>
+</div>
+
+<div class="card bg-white border shadow-sm rounded-3 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light text-secondary small text-uppercase" style="letter-spacing: 0.04em;">
+                <tr>
+                    <th class="ps-4">Campaign Title</th>
+                    <th>Sender ID</th>
+                    <th>Target Audience</th>
+                    <th>Recipients</th>
+                    <th>SMS Credits</th>
+                    <th>Status</th>
+                    <th>Timestamp</th>
+                    <th class="text-end pe-4">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in campaigns %}
+                <tr>
+                    <td class="ps-4">
+                        <a href="{% url 'messaging:campaign_detail' c.id %}" class="fw-bold text-dark text-decoration-none hover-primary">
+                            {{ c.title }}
+                        </a>
+                        <div class="text-muted" style="font-size: 0.72rem;">Ref: #CMP-{{ c.id|stringformat:"04d" }}</div>
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark border font-mono">{{ c.sender_id }}</span>
+                    </td>
+                    <td class="text-secondary small">{{ c.target_group.name|default:"All Workspace Audience" }}</td>
+                    <td class="small font-mono">{{ c.valid_recipients_count }} / {{ c.total_recipients }}</td>
+                    <td class="font-mono fw-semibold text-dark">{{ c.actual_credits_used }}</td>
+                    <td>
+                        {% if c.status == 'COMPLETED' %}
+                        <span class="badge bg-success font-mono"><i class="bi bi-check-circle-fill me-1"></i>Delivered</span>
+                        {% elif c.status == 'PARTIAL_FAILURE' %}
+                        <span class="badge bg-warning text-dark font-mono"><i class="bi bi-exclamation-circle me-1"></i>Partial</span>
+                        {% elif c.status == 'PROCESSING' %}
+                        <span class="badge bg-primary font-mono"><i class="bi bi-arrow-repeat me-1"></i>Sending</span>
+                        {% elif c.status == 'QUEUED' %}
+                        <span class="badge bg-info text-dark font-mono"><i class="bi bi-clock me-1"></i>Queued</span>
+                        {% elif c.status == 'FAILED' %}
+                        <span class="badge bg-danger font-mono"><i class="bi bi-x-circle me-1"></i>Failed</span>
+                        {% elif c.status == 'CANCELLED' %}
+                        <span class="badge bg-secondary font-mono">Cancelled</span>
+                        {% else %}
+                        <span class="badge bg-light text-dark border font-mono">{{ c.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-secondary small font-mono">{{ c.created_at|date:"M d, Y H:i" }}</td>
+                    <td class="text-end pe-4">
+                        <a href="{% url 'messaging:campaign_detail' c.id %}" class="btn btn-sm btn-outline-primary py-1 px-2.5">
+                            Analytics <i class="bi bi-chevron-right ms-1"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center py-5 text-muted">
+                        <i class="bi bi-send display-4 text-slate-300 d-block mb-3"></i>
+                        <h6 class="fw-bold text-dark">No Campaigns Dispatched</h6>
+                        <p class="small text-secondary mb-3">Compose and launch your first targeted SMS broadcast to your Ghanaian audience.</p>
+                        <a href="{% url 'messaging:campaign_create' %}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-send-plus-fill me-1"></i> Launch First Campaign
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

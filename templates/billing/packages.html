@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}SMS Packages & Top-Up &bull; {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h4 class="fw-bold mb-1 text-slate-900">SMS Packages & Retail Pricing</h4>
+        <p class="text-secondary small mb-0">Select an SMS package in Ghanaian Cedi ({{ PRIMARY_CURRENCY }}). Purchased credits never expire.</p>
+    </div>
+    <div class="d-flex align-items-center gap-2.5">
+        <div class="tb-balance-pill">
+            <i class="bi bi-wallet2 text-success"></i>
+            <span class="font-mono">{{ balance|default:0 }}</span>
+            <span class="small text-muted fw-semibold">Credits Available</span>
+        </div>
+        <a href="{% url 'billing:purchase_history' %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+            <i class="bi bi-clock-history me-1"></i> Order History
+        </a>
+    </div>
+</div>
+
+<!-- Package Grid -->
+<div class="row g-4 justify-content-center mb-5">
+    {% for pkg in packages %}
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100 p-4 text-center bg-white position-relative shadow-sm {% if pkg.is_promotional %}border-primary border-2 shadow{% endif %}" style="border-radius: var(--tb-radius-xl);">
+            {% if pkg.is_promotional %}
+            <span class="badge bg-primary position-absolute top-0 start-50 translate-middle shadow-sm px-3 py-1.5 font-sans">
+                <i class="bi bi-star-fill me-1"></i> Best Value Tier
+            </span>
+            {% endif %}
+
+            <div class="text-uppercase text-secondary small fw-bold mt-2 font-sans tracking-wide">
+                {{ pkg.name }}
+            </div>
+
+            <div class="display-6 fw-bold text-dark my-3 font-mono">
+                <span class="text-muted small fw-normal">{{ CURRENCY_SYMBOL }}</span>{{ pkg.effective_price }}
+            </div>
+
+            <div class="p-2 rounded bg-light border mb-3">
+                <div class="fw-bold text-primary font-mono" style="font-size: 1.15rem;">
+                    {{ pkg.credits|floatformat:0 }} SMS Credits
+                </div>
+                <div class="text-muted small font-mono">
+                    {{ CURRENCY_SYMBOL }}{{ pkg.price_per_credit }} per SMS credit
+                </div>
+            </div>
+
+            <ul class="list-unstyled text-secondary small text-start border-top pt-3 mb-4">
+                <li class="mb-2.5 d-flex align-items-center gap-2">
+                    <i class="bi bi-check-circle-fill text-success fs-6"></i>
+                    <span><strong>100% Reliable Delivery</strong> via mNotify</span>
+                </li>
+                <li class="mb-2.5 d-flex align-items-center gap-2">
+                    <i class="bi bi-check-circle-fill text-success fs-6"></i>
+                    <span>Custom Alphanumeric Sender ID</span>
+                </li>
+                <li class="mb-2.5 d-flex align-items-center gap-2">
+                    <i class="bi bi-check-circle-fill text-success fs-6"></i>
+                    <span>Excel & CSV Contact Import</span>
+                </li>
+                <li class="mb-2.5 d-flex align-items-center gap-2">
+                    <i class="bi bi-check-circle-fill text-success fs-6"></i>
+                    <span>No Expiration Date on Credits</span>
+                </li>
+            </ul>
+
+            <form method="post" action="{% url 'billing:checkout_initiate' pkg.id %}" class="mt-auto">
+                {% csrf_token %}
+                <button type="submit" class="btn {% if pkg.is_promotional %}btn-primary{% else %}btn-outline-primary{% endif %} w-100 py-2 shadow-sm d-flex align-items-center justify-content-center gap-2">
+                    <span>Purchase Package</span>
+                    <i class="bi bi-arrow-right"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center py-5">
+        <p class="text-muted">No active SMS packages configured by platform administrator yet.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Paystack Guaranteed Payment Security Banner -->
+<div class="card p-4 border-0 shadow-sm bg-white">
+    <div class="row align-items-center g-3">
+        <div class="col-md-8">
+            <div class="d-flex align-items-center gap-3">
+                <div class="tb-stat-icon emerald">
+                    <i class="bi bi-shield-lock-fill"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold text-dark mb-1">Instant Top-Up Secured by Paystack</h6>
+                    <p class="text-secondary small mb-0">
+                        Supports MTN Mobile Money, Telecel Cash, AT Money, and Visa/Mastercard debit cards. Credits are allocated to your verified ledger immediately.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <span class="badge bg-light text-secondary border px-3 py-2">
+                <i class="bi bi-lock-fill text-success me-1"></i> 256-Bit SSL Encrypted Checkout
+            </span>
+        </div>
+    </div>
+</div>
+{% endblock %}

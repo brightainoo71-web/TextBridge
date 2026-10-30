@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+
+{% block title %}Campaign Details | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <h4 class="fw-bold mb-0 text-dark tracking-tight">{{ campaign.title }}</h4>
+            {% if campaign.status == 'COMPLETED' %}
+            <span class="badge bg-success font-mono"><i class="bi bi-check-circle-fill me-1"></i>Delivered</span>
+            {% elif campaign.status == 'PARTIAL_FAILURE' %}
+            <span class="badge bg-warning text-dark font-mono"><i class="bi bi-exclamation-triangle-fill me-1"></i>Partial Failure</span>
+            {% elif campaign.status == 'PROCESSING' %}
+            <span class="badge bg-primary font-mono"><i class="bi bi-arrow-repeat me-1"></i>Sending</span>
+            {% elif campaign.status == 'QUEUED' %}
+            <span class="badge bg-info text-dark font-mono"><i class="bi bi-clock me-1"></i>Queued</span>
+            {% elif campaign.status == 'CANCELLED' %}
+            <span class="badge bg-secondary font-mono">Cancelled</span>
+            {% else %}
+            <span class="badge bg-light text-dark border font-mono">{{ campaign.status }}</span>
+            {% endif %}
+        </div>
+        <p class="text-secondary small mb-0">
+            Sender ID: <strong class="font-mono text-dark">{{ campaign.sender_id }}</strong> &bull;
+            Audience: <strong>{{ campaign.target_group.name|default:"All Workspace Audience" }}</strong> &bull;
+            Dispatched: {{ campaign.created_at|date:"M d, Y H:i" }}
+        </p>
+    </div>
+
+    <div class="d-flex gap-2">
+        {% if campaign.status == 'QUEUED' or campaign.status == 'DRAFT' %}
+        <form method="post" action="{% url 'messaging:campaign_cancel' campaign.id %}" onsubmit="return confirm('Cancel this queued campaign?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-x-circle me-1"></i> Cancel Campaign
+            </button>
+        </form>
+        {% endif %}
+        <a href="{% url 'messaging:campaign_list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Back to Campaigns
+        </a>
+    </div>
+</div>
+
+<!-- Key Performance Metrics Grid -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card p-3.5 bg-white border shadow-sm rounded-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="text-secondary small fw-bold text-uppercase" style="font-size: 0.7rem;">Target Audience</span>
+                <i class="bi bi-people text-secondary"></i>
+            </div>
+            <div class="display-6 fw-bold text-dark font-mono">{{ campaign.total_recipients }}</div>
+            <span class="text-muted small">Total phone numbers</span>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card p-3.5 bg-white border shadow-sm rounded-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="text-success small fw-bold text-uppercase" style="font-size: 0.7rem;">Delivered</span>
+                <i class="bi bi-check2-circle text-success"></i>
+            </div>
+            <div class="display-6 fw-bold text-success font-mono">{{ delivered_count|add:accepted_count }}</div>
+            <span class="text-success small">Successful telecom handoff</span>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card p-3.5 bg-white border shadow-sm rounded-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="text-danger small fw-bold text-uppercase" style="font-size: 0.7rem;">Failed / Suppressed</span>
+                <i class="bi bi-exclamation-octagon text-danger"></i>
+            </div>
+            <div class="display-6 fw-bold text-danger font-mono">{{ failed_count }}</div>
+            <span class="text-danger small">Bounced or unsubscribed</span>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card p-3.5 bg-white border shadow-sm rounded-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="text-primary small fw-bold text-uppercase" style="font-size: 0.7rem;">Credits Billed</span>
+                <i class="bi bi-coin text-primary"></i>
+            </div>
+            <div class="display-6 fw-bold text-primary font-mono">{{ campaign.actual_credits_used }}</div>
+            <span class="text-secondary small">Based on segments dispatched</span>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Message Template Content -->
+    <div class="col-lg-5">
+        <div class="card bg-white border shadow-sm rounded-3 p-4 h-100">
+            <h6 class="fw-bold text-dark mb-3">Dispatched SMS Content</h6>
+            <div class="p-3 rounded-3 bg-light border font-mono small text-dark mb-3" style="white-space: pre-wrap; line-height: 1.6;">{{ campaign.message_template }}</div>
+            
+            <div class="small text-secondary">
+                <div class="d-flex justify-content-between py-1 border-bottom">
+                    <span>Sender Header:</span>
+                    <strong class="font-mono text-dark">{{ campaign.sender_id }}</strong>
+                </div>
+                <div class="d-flex justify-content-between py-1 border-bottom">
+                    <span>Target Group:</span>
+                    <strong class="text-dark">{{ campaign.target_group.name|default:"All Workspace Contacts" }}</strong>
+                </div>
+                <div class="d-flex justify-content-between py-1">
+                    <span>Estimated Cost:</span>
+                    <strong class="font-mono text-dark">{{ campaign.estimated_credits }} credits</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recipient Logs -->
+    <div class="col-lg-7">
+        <div class="card bg-white border shadow-sm rounded-3 overflow-hidden h-100">
+            <div class="card-header bg-white py-3 px-4 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold text-dark mb-0">Delivery Logs ({{ recipients.count }})</h6>
+                <span class="badge bg-secondary-subtle text-secondary font-mono small">Live Gateway Sync</span>
+            </div>
+            <div class="table-responsive" style="max-height: 380px;">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-secondary small text-uppercase" style="letter-spacing: 0.04em;">
+                        <tr>
+                            <th class="ps-4">Phone Number</th>
+                            <th>Status</th>
+                            <th>Segments</th>
+                            <th>Cost</th>
+                            <th class="pe-4">Error / Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in recipients %}
+                        <tr>
+                            <td class="ps-4 font-mono small fw-medium text-dark">{{ r.phone_number }}</td>
+                            <td>
+                                {% if r.status == 'DELIVERED' or r.status == 'ACCEPTED' %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle font-mono">Delivered</span>
+                                {% elif r.status == 'FAILED' %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle font-mono">Failed</span>
+                                {% elif r.status == 'SKIPPED_SUPPRESSED' %}
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle font-mono">Opted-Out</span>
+                                {% else %}
+                                <span class="badge bg-light text-dark border font-mono">{{ r.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="font-mono small">{{ r.segment_count }}</td>
+                            <td class="font-mono small fw-semibold text-dark">{{ r.credits_deducted }}</td>
+                            <td class="pe-4 text-muted small" style="font-size: 0.75rem;">{{ r.error_message|default:"Success (200)" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-muted small">No recipient logs found for this campaign.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if campaign.status == 'QUEUED' or campaign.status == 'PROCESSING' %}
+<script>
+// Auto-refresh page every 4 seconds while campaign is processing asynchronously in the background
+setTimeout(function() {
+    window.location.reload();
+}, 4000);
+</script>
+{% endif %}
+{% endblock %}

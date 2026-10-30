@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Account Suspended | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-5">
+    <div class="col-md-6 col-lg-5 text-center">
+        <div class="card p-5 bg-white border-danger shadow-sm">
+            <i class="bi bi-shield-x text-danger display-1 mb-3"></i>
+            <h3 class="fw-bold text-dark">Business Account Suspended</h3>
+            <p class="text-secondary">
+                Your business workspace has been suspended by the platform administrator due to a policy review or administrative action.
+            </p>
+            <p class="text-muted small">
+                If you believe this is in error, please contact platform support or your administrator.
+            </p>
+            <div class="mt-4">
+                <form method="post" action="{% url 'accounts:logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-secondary">Sign Out</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

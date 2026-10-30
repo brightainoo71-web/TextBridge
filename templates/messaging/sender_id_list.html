@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+
+{% block title %}Sender IDs | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2">
+            <h4 class="fw-bold mb-0 text-dark tracking-tight">Sender ID Whitelisting</h4>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-mono">NCA Regulated</span>
+        </div>
+        <p class="text-secondary small mb-0 mt-1">Configure the branded alphanumeric header that displays on recipients' phones (max 11 chars)</p>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Left Column: Request Form -->
+    <div class="col-lg-4">
+        <div class="card p-4 bg-white border shadow-sm rounded-3">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                <i class="bi bi-tag-fill text-primary fs-5"></i>
+                <h6 class="fw-bold text-dark mb-0">Request Custom Brand ID</h6>
+            </div>
+            
+            <p class="text-secondary small mb-3">
+                Sender IDs must be alphanumeric and exactly 3 to 11 characters long without spaces (e.g. <code class="font-mono">IRONFIT</code>, <code class="font-mono">SHOPRITE</code>).
+            </p>
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-dark">Desired Sender ID *</label>
+                    <input type="text" name="sender_id" maxlength="11" class="form-control font-mono text-uppercase" placeholder="e.g. IRONFIT" style="letter-spacing: 0.05em;" required>
+                    <div class="form-text small" style="font-size: 0.72rem;">All letters and numbers. Max 11 characters.</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-dark">Primary Purpose & Use Case *</label>
+                    <textarea name="purpose" class="form-control" rows="3" placeholder="e.g. Transactional order receipts and member notifications for our registered gym members" required></textarea>
+                    <div class="form-text small" style="font-size: 0.72rem;">Required by telecom operators to prevent bank/gov spoofing.</div>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 shadow-sm d-flex align-items-center justify-content-center gap-2">
+                    <i class="bi bi-send-check"></i> Submit for Whitelisting
+                </button>
+            </form>
+        </div>
+
+        <!-- NCA Whitelisting Notice Card -->
+        <div class="card p-3.5 bg-light border shadow-none rounded-3 mt-3 small">
+            <h6 class="fw-bold text-dark mb-1.5" style="font-size: 0.8rem;">
+                <i class="bi bi-clock-history text-primary me-1"></i> Telco Whitelisting SLA
+            </h6>
+            <p class="text-secondary mb-0" style="font-size: 0.75rem; line-height: 1.5;">
+                Ghana telecommunications regulations require individual verification of brand names. Custom IDs undergo automated and operator review within <strong>24 business hours</strong>. You can use the instant platform defaults below immediately.
+            </p>
+        </div>
+    </div>
+
+    <!-- Right Column: Sender ID Lists -->
+    <div class="col-lg-8">
+        <!-- Section 1: Platform Shared Defaults (Instant) -->
+        <div class="card bg-white border shadow-sm rounded-3 mb-4 overflow-hidden">
+            <div class="card-header bg-white py-3 px-4 border-bottom d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-lightning-charge-fill text-warning"></i>
+                    <h6 class="fw-bold mb-0 text-dark">Platform Shared Defaults (Instant Delivery)</h6>
+                </div>
+                <span class="badge bg-success-subtle text-success border border-success-subtle font-mono">Ready to Use</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-secondary small text-uppercase" style="letter-spacing: 0.04em;">
+                        <tr>
+                            <th class="ps-4">Sender ID</th>
+                            <th>Description</th>
+                            <th>Availability</th>
+                            <th class="pe-4 text-end">Telecom Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in system_sender_ids %}
+                        <tr>
+                            <td class="ps-4 font-mono fw-bold text-primary fs-6">{{ s.sender_id }}</td>
+                            <td class="text-secondary small">{{ s.purpose|default:"Platform-wide pre-verified delivery route" }}</td>
+                            <td>
+                                <span class="badge bg-light text-dark border font-mono">Shared Platform Route</span>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <span class="badge bg-success font-mono"><i class="bi bi-check-circle-fill me-1"></i>Active</span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-3 text-muted small">No platform defaults configured.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Section 2: Workspace Custom Sender IDs -->
+        <div class="card bg-white border shadow-sm rounded-3 overflow-hidden">
+            <div class="card-header bg-white py-3 px-4 border-bottom d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-building-lock text-primary"></i>
+                    <h6 class="fw-bold mb-0 text-dark">Your Workspace Custom Sender IDs</h6>
+                </div>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-mono">{{ sender_ids.count }} Registered</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-secondary small text-uppercase" style="letter-spacing: 0.04em;">
+                        <tr>
+                            <th class="ps-4">Sender ID</th>
+                            <th>Purpose</th>
+                            <th>Status</th>
+                            <th class="pe-4 text-end">Submitted</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in sender_ids %}
+                        <tr>
+                            <td class="ps-4 font-mono fw-bold text-dark fs-6">{{ s.sender_id }}</td>
+                            <td class="text-secondary small">{{ s.purpose }}</td>
+                            <td>
+                                {% if s.status == 'APPROVED' %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle font-mono">
+                                    <i class="bi bi-check-circle-fill me-1"></i>Approved & Active
+                                </span>
+                                {% elif s.status == 'PENDING' %}
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle font-mono">
+                                    <i class="bi bi-clock-history me-1"></i>Pending Review
+                                </span>
+                                {% else %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle font-mono">
+                                    <i class="bi bi-x-circle-fill me-1"></i>Rejected
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-4 text-end text-muted small font-mono">{{ s.created_at|date:"M d, Y" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted small">
+                                <i class="bi bi-shield-slash display-6 text-slate-300 d-block mb-2"></i>
+                                You haven't registered any custom brand Sender IDs yet. Submit one using the form on the left.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

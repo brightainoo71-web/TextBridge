@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+
+{% block title %}Workspace Dashboard &bull; {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<!-- Workspace Overview Header -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <h4 class="fw-bold mb-0 text-slate-900">{{ business.name }}</h4>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-mono small">
+                {{ business.preferred_sender_id|default:"DEFAULT_ID" }}
+            </span>
+        </div>
+        <p class="text-secondary small mb-0">
+            {{ business.get_category_display }} &bull; Ghana Telecom Node &bull; Default Currency: {{ PRIMARY_CURRENCY }} ({{ CURRENCY_SYMBOL }})
+        </p>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'contacts:contact_import' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1.5 shadow-sm">
+            <i class="bi bi-cloud-arrow-up"></i>
+            <span>Import Contacts</span>
+        </a>
+        <a href="{% url 'billing:packages' %}" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1.5 shadow-sm">
+            <i class="bi bi-credit-card"></i>
+            <span>Buy Credits</span>
+        </a>
+        <a href="{% url 'messaging:campaign_create' %}" class="btn btn-primary btn-sm d-flex align-items-center gap-1.5 shadow-sm">
+            <i class="bi bi-send-fill"></i>
+            <span>New Campaign</span>
+        </a>
+    </div>
+</div>
+
+<!-- Primary Metric Cards -->
+<div class="row g-3 mb-4">
+    <!-- Credit Balance -->
+    <div class="col-6 col-lg-3">
+        <div class="tb-stat-card">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="tb-stat-label">Available Balance</span>
+                <div class="tb-stat-icon indigo">
+                    <i class="bi bi-wallet2"></i>
+                </div>
+            </div>
+            <div class="tb-stat-value font-mono">{{ balance|default:0 }}</div>
+            <div class="mt-2 pt-1 border-top d-flex justify-content-between align-items-center">
+                <span class="small text-muted">Active SMS Credits</span>
+                <a href="{% url 'billing:packages' %}" class="small text-primary fw-semibold text-decoration-none">Top up &rarr;</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delivered SMS -->
+    <div class="col-6 col-lg-3">
+        <div class="tb-stat-card">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="tb-stat-label">Delivered SMS</span>
+                <div class="tb-stat-icon emerald">
+                    <i class="bi bi-check2-circle"></i>
+                </div>
+            </div>
+            <div class="tb-stat-value text-success font-mono">{{ stats.delivered|default:0 }}</div>
+            <div class="mt-2 pt-1 border-top d-flex justify-content-between align-items-center">
+                <span class="small text-muted">{{ stats.total|default:0 }} total dispatched</span>
+                <span class="badge bg-success-subtle text-success small">DLR Live</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audience Size -->
+    <div class="col-6 col-lg-3">
+        <div class="tb-stat-card">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="tb-stat-label">Total Audience</span>
+                <div class="tb-stat-icon blue">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+            </div>
+            <div class="tb-stat-value font-mono">{{ contacts_count }}</div>
+            <div class="mt-2 pt-1 border-top d-flex justify-content-between align-items-center">
+                <span class="small text-muted">Subscribed Contacts</span>
+                <a href="{% url 'contacts:contact_list' %}" class="small text-primary fw-semibold text-decoration-none">View all &rarr;</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campaigns Dispatched -->
+    <div class="col-6 col-lg-3">
+        <div class="tb-stat-card">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="tb-stat-label">Broadcasts</span>
+                <div class="tb-stat-icon amber">
+                    <i class="bi bi-broadcast"></i>
+                </div>
+            </div>
+            <div class="tb-stat-value font-mono">{{ campaigns_count }}</div>
+            <div class="mt-2 pt-1 border-top d-flex justify-content-between align-items-center">
+                <span class="small text-muted">Total Campaigns</span>
+                <a href="{% url 'messaging:campaign_list' %}" class="small text-primary fw-semibold text-decoration-none">History &rarr;</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Recent Campaigns Table -->
+    <div class="col-lg-8">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-broadcast text-primary"></i>
+                    <h6 class="fw-bold mb-0 text-slate-900">Recent Broadcast Campaigns</h6>
+                </div>
+                <a href="{% url 'messaging:campaign_list' %}" class="small text-primary fw-semibold text-decoration-none">
+                    View Full History &rarr;
+                </a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Campaign Name</th>
+                            <th>Audience</th>
+                            <th>Credits</th>
+                            <th>Status</th>
+                            <th>Date Dispatched</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in recent_campaigns %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'messaging:campaign_detail' c.id %}" class="fw-bold text-dark text-decoration-none">
+                                    {{ c.title }}
+                                </a>
+                                <div class="text-muted small font-mono">Sender: {{ c.sender_id }}</div>
+                            </td>
+                            <td class="small">{{ c.valid_recipients_count }} recipients</td>
+                            <td class="font-mono fw-medium">{{ c.actual_credits_used }}</td>
+                            <td>
+                                {% if c.status == 'COMPLETED' %}
+                                <span class="badge bg-success">Delivered</span>
+                                {% elif c.status == 'PARTIAL_FAILURE' %}
+                                <span class="badge bg-warning text-dark">Partial</span>
+                                {% elif c.status == 'QUEUED' %}
+                                <span class="badge bg-info text-dark">Queued</span>
+                                {% elif c.status == 'PROCESSING' %}
+                                <span class="badge bg-primary">Sending</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ c.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-secondary small font-mono">{{ c.created_at|date:"M d, H:i" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                <div class="mb-2"><i class="bi bi-send display-6 text-slate-300"></i></div>
+                                <div class="fw-semibold text-dark">No campaigns dispatched yet</div>
+                                <p class="small text-secondary mb-3">Compose your first SMS broadcast to start reaching your customers.</p>
+                                <a href="{% url 'messaging:campaign_create' %}" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-send-plus me-1"></i> New Campaign
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Purchase & Balance Top-Ups -->
+    <div class="col-lg-4">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-credit-card text-success"></i>
+                    <h6 class="fw-bold mb-0 text-slate-900">Recent Purchases</h6>
+                </div>
+                <a href="{% url 'billing:purchase_history' %}" class="small text-primary fw-semibold text-decoration-none">All Orders &rarr;</a>
+            </div>
+            <div class="list-group list-group-flush">
+                {% for p in recent_purchases %}
+                <div class="list-group-item d-flex justify-content-between align-items-center py-3 border-bottom">
+                    <div>
+                        <div class="fw-bold small text-dark">{{ p.package.name|default:"Custom Top-Up" }}</div>
+                        <div class="text-muted font-mono" style="font-size: 0.725rem;">
+                            {{ p.created_at|date:"M d, Y" }} &bull; {{ p.payment_reference|slice:":14" }}...
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-success-subtle text-success border border-success-subtle font-mono">
+                            +{{ p.credits_granted }} SMS
+                        </span>
+                        <div class="small fw-bold text-dark mt-1 font-mono">{{ CURRENCY_SYMBOL }}{{ p.amount_paid }}</div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="p-4 text-center text-muted small">
+                    <i class="bi bi-receipt display-6 text-slate-300 d-block mb-2"></i>
+                    No package purchases yet.
+                    <div class="mt-3">
+                        <a href="{% url 'billing:packages' %}" class="btn btn-primary btn-sm w-100">
+                            <i class="bi bi-plus-circle me-1"></i> Buy SMS Package
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Instant Paystack Info Footer -->
+            <div class="p-3 bg-light rounded-bottom border-top mt-auto small text-muted d-flex align-items-center gap-2">
+                <i class="bi bi-shield-check text-success fs-5"></i>
+                <div style="font-size: 0.785rem;">
+                    Secured by Paystack. Instant credit allocation upon Mobile Money or card verification.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

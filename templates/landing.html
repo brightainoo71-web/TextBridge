@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+
+{% block title %}TextBridge &bull; High-Performance Multi-Tenant SMS Infrastructure for Ghana{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="tb-hero-gradient pt-5 pb-5 mb-5 border-bottom">
+    <div class="container py-lg-4">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-7">
+                <div class="d-inline-flex align-items-center gap-2 px-3 py-1.5 rounded-pill bg-white border shadow-sm mb-4">
+                    <span class="tb-pulse-dot"></span>
+                    <span class="small fw-semibold text-slate-700">mNotify Telecom Gateway &bull; Live in Ghana</span>
+                </div>
+
+                <h1 class="tb-hero-title mb-3">
+                    The Modern SMS Infrastructure Built for Ghanaian Businesses.
+                </h1>
+
+                <p class="lead text-secondary mb-4" style="font-size: 1.15rem; line-height: 1.6;">
+                    Broadcast personalized customer campaigns, send urgent notifications, and automate membership renewals with dedicated Alphanumeric Sender IDs and instant Paystack funding.
+                </p>
+
+                <div class="d-flex flex-wrap gap-3 mb-4">
+                    <a href="{% url 'accounts:register' %}" class="btn btn-primary btn-lg px-4 py-2.5 shadow">
+                        <span>Create Business Workspace</span>
+                        <i class="bi bi-arrow-right ms-2"></i>
+                    </a>
+                    <a href="{% url 'accounts:login' %}" class="btn btn-outline-secondary btn-lg px-4 py-2.5">
+                        <i class="bi bi-box-arrow-in-right me-1.5"></i> Sign In to Portal
+                    </a>
+                </div>
+
+                <!-- Trust Micro-Badges -->
+                <div class="d-flex flex-wrap gap-4 pt-2 text-muted small">
+                    <div class="d-flex align-items-center gap-1.5">
+                        <i class="bi bi-check2-circle text-primary fs-5"></i>
+                        <span>Dedicated Sender IDs</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-1.5">
+                        <i class="bi bi-check2-circle text-primary fs-5"></i>
+                        <span>Ghanaian Phone Normalizer</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-1.5">
+                        <i class="bi bi-check2-circle text-primary fs-5"></i>
+                        <span>No Monthly Credit Expiry</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Smartphone Device Simulation Card -->
+            <div class="col-lg-5">
+                <div class="tb-preview-phone shadow-lg">
+                    <div class="tb-preview-screen p-3">
+                        <!-- Top status bar -->
+                        <div class="d-flex justify-content-between align-items-center text-muted small pb-2 mb-2 border-bottom" style="font-size: 0.7rem;">
+                            <span>MTN 4G / Telecel</span>
+                            <span class="fw-bold">12:30 PM</span>
+                            <span><i class="bi bi-battery-full text-success"></i></span>
+                        </div>
+
+                        <!-- Chat header -->
+                        <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px; font-size: 0.8rem;">
+                                AB
+                            </div>
+                            <div>
+                                <div class="fw-bold text-dark small" style="line-height: 1.2;">Abtuniverse</div>
+                                <div class="text-success" style="font-size: 0.68rem;"><i class="bi bi-shield-check"></i> Verified Sender ID</div>
+                            </div>
+                        </div>
+
+                        <!-- Simulated Messages -->
+                        <div class="d-flex flex-column gap-2 mb-3">
+                            <div class="bg-white p-2.5 rounded-3 border shadow-sm small text-dark">
+                                <div class="text-primary fw-bold" style="font-size: 0.72rem;">TextBridge Broadcast</div>
+                                {% verbatim %}"Hi Kwame, your membership renewal is confirmed. Your trainer session starts tomorrow at 6:30 AM! Welcome back to IronFit."{% endverbatim %}
+                                <div class="text-end text-muted mt-1" style="font-size: 0.65rem;">Delivered &bull; 12:30 PM</div>
+                            </div>
+                        </div>
+
+                        <!-- Campaign Stats Inside Phone -->
+                        <div class="bg-white p-2.5 rounded-3 border">
+                            <div class="d-flex justify-content-between small text-muted mb-1" style="font-size: 0.7rem;">
+                                <span>Batch Status:</span>
+                                <span class="fw-bold text-success">100% Delivered</span>
+                            </div>
+                            <div class="progress" style="height: 4px;">
+                                <div class="progress-bar bg-success" style="width: 100%;"></div>
+                            </div>
+                            <div class="d-flex justify-content-between mt-2 pt-1 border-top font-mono" style="font-size: 0.68rem;">
+                                <span>1,500 Dispatched</span>
+                                <span>0 Bounces</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-4">
+    <!-- Multi-Industry Segment Matrix -->
+    <div class="text-center mb-5">
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1.5 rounded-pill fw-semibold mb-2">Industry Solutions</span>
+        <h2 class="fw-bold mb-2">Engineered For Multi-Sector Operations</h2>
+        <p class="text-secondary max-w-xl mx-auto">One robust, multi-tenant platform adapting dynamically to your specific communication workflows</p>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card h-100 p-4 border-0 shadow-sm bg-white">
+                <div class="tb-stat-icon emerald mb-3">
+                    <i class="bi bi-heart-pulse-fill"></i>
+                </div>
+                <h5 class="fw-bold text-dark">Gyms & Fitness Centres</h5>
+                <p class="text-secondary small mb-0">Class schedule updates, trainer assignments, subscription expiry reminders, and instant top-ups.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 p-4 border-0 shadow-sm bg-white">
+                <div class="tb-stat-icon indigo mb-3">
+                    <i class="bi bi-mortarboard-fill"></i>
+                </div>
+                <h5 class="fw-bold text-dark">Schools & Academies</h5>
+                <p class="text-secondary small mb-0">Parent-Teacher Association alerts, fee dues deadlines, emergency announcements, and exam timetables.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 p-4 border-0 shadow-sm bg-white">
+                <div class="tb-stat-icon blue mb-3">
+                    <i class="bi bi-bank2"></i>
+                </div>
+                <h5 class="fw-bold text-dark">Churches & Ministries</h5>
+                <p class="text-secondary small mb-0">Sunday service reminders, youth meeting alerts, mid-week prayer broadcasts, and ministerial updates.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 p-4 border-0 shadow-sm bg-white">
+                <div class="tb-stat-icon amber mb-3">
+                    <i class="bi bi-shop-window"></i>
+                </div>
+                <h5 class="fw-bold text-dark">Retail & Boutiques</h5>
+                <p class="text-secondary small mb-0">Flash discounts, order ready notifications, loyalty rewards, and customer engagement messages.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 p-4 border-0 shadow-sm bg-white">
+                <div class="tb-stat-icon emerald mb-3">
+                    <i class="bi bi-hospital-fill"></i>
+                </div>
+                <h5 class="fw-bold text-dark">Clinics & Healthcare</h5>
+                <p class="text-secondary small mb-0">Doctor appointment confirmations, lab result alerts, routine checkup reminders, and health tips.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 p-4 border-0 shadow-sm bg-white">
+                <div class="tb-stat-icon indigo mb-3">
+                    <i class="bi bi-buildings-fill"></i>
+                </div>
+                <h5 class="fw-bold text-dark">Growing Enterprises</h5>
+                <p class="text-secondary small mb-0">Vendor notifications, internal staff communications, and high-converting marketing campaigns.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core Engineering Features -->
+    <div class="card bg-white p-5 border-0 shadow-sm my-5">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-6">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1.5 rounded-pill fw-semibold mb-2">Engineered Reliability</span>
+                <h3 class="fw-bold mb-3">Why Ghanaian Businesses Trust TextBridge</h3>
+                <div class="d-flex flex-column gap-3 mt-4">
+                    <div class="d-flex gap-3">
+                        <div class="tb-stat-icon indigo" style="width: 36px; height: 36px; font-size: 1rem;"><i class="bi bi-shield-check"></i></div>
+                        <div>
+                            <h6 class="fw-bold mb-1">Strict Multi-Tenant Isolation</h6>
+                            <p class="text-secondary small mb-0">Every business workspace has dedicated contact lists, campaigns, and auditable ledger entries. Your data is never cross-exposed.</p>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-3">
+                        <div class="tb-stat-icon emerald" style="width: 36px; height: 36px; font-size: 1rem;"><i class="bi bi-phone"></i></div>
+                        <div>
+                            <h6 class="fw-bold mb-1">Intelligent Ghanaian Phone Normalization</h6>
+                            <p class="text-secondary small mb-0">Automatically parses and validates local formats (`024`, `054`, `020`, `027`, `050`) into the international `233...` format before sending.</p>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-3">
+                        <div class="tb-stat-icon blue" style="width: 36px; height: 36px; font-size: 1rem;"><i class="bi bi-credit-card-2-front"></i></div>
+                        <div>
+                            <h6 class="fw-bold mb-1">Instant Paystack Mobile Money Top-Up</h6>
+                            <p class="text-secondary small mb-0">Top up SMS credits instantly using MTN Mobile Money, Telecel Cash, AT Money, or Visa/Mastercard in Ghanaian Cedi (GHS).</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="p-4 bg-light rounded-4 border">
+                    <h6 class="fw-bold text-dark mb-3"><i class="bi bi-file-earmark-spreadsheet-fill text-success me-2"></i>Spreadsheet Importer</h6>
+                    <p class="text-secondary small mb-3">Upload your customer list in Excel (.xlsx) or CSV format. Our importer detects duplicates, validates carrier prefixes, and provides an instant error report.</p>
+                    <div class="table-responsive bg-white rounded border">
+                        <table class="table table-sm table-borderless mb-0 font-mono small">
+                            <thead class="bg-light border-bottom text-muted">
+                                <tr><th>Name</th><th>Input Phone</th><th>Normalized</th><th>Status</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>Kofi Mensah</td><td>024 123 4567</td><td class="text-primary">233241234567</td><td><span class="badge bg-success">Valid</span></td></tr>
+                                <tr><td>Ama Serwaa</td><td>+233201112222</td><td class="text-primary">233201112222</td><td><span class="badge bg-success">Valid</span></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pricing Section -->
+    <div class="py-5 border-top">
+        <div class="text-center mb-5">
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1.5 rounded-pill fw-semibold mb-2">Transparent Pricing</span>
+            <h2 class="fw-bold mb-2">Straightforward SMS Packages</h2>
+            <p class="text-secondary">Priced in Ghanaian Cedi ({{ PRIMARY_CURRENCY }}). Purchased credits never expire.</p>
+        </div>
+
+        <div class="row g-4 justify-content-center">
+            {% for pkg in packages %}
+            <div class="col-md-6 col-lg-3">
+                <div class="card h-100 p-4 text-center bg-white position-relative {% if pkg.is_promotional %}border-primary border-2 shadow{% endif %}">
+                    {% if pkg.is_promotional %}
+                    <span class="badge bg-primary position-absolute top-0 start-50 translate-middle shadow-sm px-3 py-1">Best Value</span>
+                    {% endif %}
+
+                    <h5 class="fw-bold text-dark mt-2 mb-1">{{ pkg.name }}</h5>
+                    <div class="display-6 fw-bold text-primary my-3">
+                        {{ CURRENCY_SYMBOL }}{{ pkg.effective_price }}
+                    </div>
+                    <p class="text-secondary small fw-medium mb-3">
+                        {{ pkg.credits|floatformat:0 }} SMS Credits
+                    </p>
+
+                    <ul class="list-unstyled text-secondary small text-start border-top pt-3 mb-4">
+                        <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i> {{ CURRENCY_SYMBOL }}{{ pkg.price_per_credit }} per credit</li>
+                        <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i> Alphanumeric Sender ID</li>
+                        <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i> Excel/CSV Contact Import</li>
+                        <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i> Real-time delivery reports</li>
+                    </ul>
+
+                    <a href="{% url 'accounts:register' %}" class="btn {% if pkg.is_promotional %}btn-primary{% else %}btn-outline-primary{% endif %} w-100 mt-auto">
+                        Get Started <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-md-4">
+                <div class="card p-4 text-center">
+                    <h5 class="fw-bold">Starter 500</h5>
+                    <div class="display-6 fw-bold text-primary my-3">{{ CURRENCY_SYMBOL }}35.00</div>
+                    <p class="text-muted small">500 SMS Credits</p>
+                    <a href="{% url 'accounts:register' %}" class="btn btn-outline-primary w-100">Get Started</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

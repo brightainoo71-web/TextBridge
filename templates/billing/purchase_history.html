@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block title %}Purchase History | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2">
+            <h4 class="fw-bold mb-0 text-dark tracking-tight">Order & Payment Receipts</h4>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-mono">{{ purchases.count }} orders</span>
+        </div>
+        <p class="text-secondary small mb-0 mt-1">All Paystack Mobile Money and Visa/Mastercard credit top-ups</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'analytics:export_report' report_type='purchases' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1.5">
+            <i class="bi bi-download"></i> Export CSV
+        </a>
+        <a href="{% url 'billing:packages' %}" class="btn btn-primary btn-sm d-flex align-items-center gap-1.5 shadow-sm">
+            <i class="bi bi-plus-circle-fill"></i> Buy SMS Package
+        </a>
+    </div>
+</div>
+
+<div class="card bg-white border shadow-sm rounded-3 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light text-secondary small text-uppercase" style="letter-spacing: 0.04em;">
+                <tr>
+                    <th class="ps-4">Timestamp</th>
+                    <th>Payment Reference</th>
+                    <th>Package Plan</th>
+                    <th>SMS Credits</th>
+                    <th>Amount Paid</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for purchase in purchases %}
+                <tr>
+                    <td class="ps-4 text-secondary small font-mono">{{ purchase.created_at|date:"M d, Y H:i" }}</td>
+                    <td>
+                        <span class="font-mono text-dark fw-medium px-2 py-0.5 rounded bg-light border small">
+                            {{ purchase.payment_reference }}
+                        </span>
+                    </td>
+                    <td class="fw-semibold text-dark">{{ purchase.package.name|default:"Custom Top-Up" }}</td>
+                    <td>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle font-mono">
+                            +{{ purchase.credits_granted }} SMS
+                        </span>
+                    </td>
+                    <td class="fw-bold text-dark font-mono">{{ CURRENCY_SYMBOL }}{{ purchase.amount_paid }}</td>
+                    <td>
+                        {% if purchase.status == 'COMPLETED' %}
+                        <span class="badge bg-success font-mono"><i class="bi bi-check-circle-fill me-1"></i>Completed</span>
+                        {% elif purchase.status == 'PENDING' %}
+                        <span class="badge bg-warning text-dark font-mono"><i class="bi bi-clock me-1"></i>Pending</span>
+                        {% elif purchase.status == 'FAILED' %}
+                        <span class="badge bg-danger font-mono"><i class="bi bi-x-circle me-1"></i>Failed</span>
+                        {% else %}
+                        <span class="badge bg-secondary font-mono">{{ purchase.status }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-5 text-muted">
+                        <i class="bi bi-receipt display-4 text-slate-300 d-block mb-3"></i>
+                        <h6 class="fw-bold text-dark">No Orders Recorded</h6>
+                        <p class="small text-secondary mb-3">You haven't purchased any SMS credit packages yet.</p>
+                        <a href="{% url 'billing:packages' %}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-bag-plus me-1"></i> View Available Packages
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

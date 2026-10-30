@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card p-4 bg-white shadow-sm">
+            <h4 class="fw-bold mb-1">{{ title }}</h4>
+            <p class="text-secondary small mb-4">Phone numbers are validated and formatted into international E.164 standard.</p>
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger py-2 small">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Full Name *</label>
+                    <input type="text" name="name" class="form-control {% if form.name.errors %}is-invalid{% endif %}" value="{{ form.name.value|default:'' }}" placeholder="e.g. Ama Serwaa" required>
+                    {% for error in form.name.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Phone Number *</label>
+                    <input type="text" name="phone_number" class="form-control {% if form.phone_number.errors %}is-invalid{% endif %}" value="{{ form.phone_number.value|default:'' }}" placeholder="e.g. 0241234567 or 233241234567" required>
+                    <div class="form-text small">Accepts local Ghanaian format (024, 054, 020, etc.) or international format (233...).</div>
+                    {% for error in form.phone_number.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Email Address (Optional)</label>
+                    <input type="email" name="email" class="form-control {% if form.email.errors %}is-invalid{% endif %}" value="{{ form.email.value|default:'' }}" placeholder="client@example.com">
+                    {% for error in form.email.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Contact Group</label>
+                    <select name="group" class="form-select">
+                        <option value="">-- No Group (Unassigned) --</option>
+                        {% for g in form.fields.group.queryset %}
+                        <option value="{{ g.id }}" {% if form.group.value == g.id %}selected{% endif %}>{{ g.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-check mb-4">
+                    <input class="form-check-input" type="checkbox" name="is_subscribed" id="is_subscribed" {% if form.is_subscribed.value or form.is_subscribed.value is None %}checked{% endif %}>
+                    <label class="form-check-label small" for="is_subscribed">
+                        Active Subscriber (consent to receive marketing and operational SMS)
+                    </label>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'contacts:contact_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Save Contact</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+
+{% block title %}Contacts | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2">
+            <h4 class="fw-bold mb-0 text-dark tracking-tight">Audience & Contacts</h4>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-mono">{{ total_count|default:"0" }} total</span>
+        </div>
+        <p class="text-secondary small mb-0 mt-1">Manage Ghana telecom subscribers, group segmentations, and consent logs</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'analytics:export_report' report_type='contacts' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1.5">
+            <i class="bi bi-download"></i> Export CSV
+        </a>
+        <a href="{% url 'contacts:contact_import' %}" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1.5">
+            <i class="bi bi-file-earmark-arrow-up"></i> Import Spreadsheet
+        </a>
+        <a href="{% url 'contacts:contact_create' %}" class="btn btn-primary btn-sm d-flex align-items-center gap-1.5 shadow-sm">
+            <i class="bi bi-person-plus-fill"></i> Add Contact
+        </a>
+    </div>
+</div>
+
+<!-- Search & Filter Card -->
+<div class="card p-3 mb-4 bg-white border shadow-sm rounded-3">
+    <form method="get" class="row g-2 align-items-center">
+        <div class="col-md-5">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                <input type="text" name="q" class="form-control border-start-0" placeholder="Search by name, normalized phone, or email..." value="{{ query }}">
+            </div>
+        </div>
+        <div class="col-md-4">
+            <select name="group" class="form-select form-select-sm">
+                <option value="">All Segment Groups ({{ total_count }})</option>
+                {% for g in groups %}
+                <option value="{{ g.id }}" {% if selected_group.id == g.id %}selected{% endif %}>{{ g.name }} ({{ g.member_count }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+            <button type="submit" class="btn btn-sm btn-primary flex-grow-1 fw-medium">
+                <i class="bi bi-funnel me-1"></i> Apply Filter
+            </button>
+            {% if query or selected_group %}
+            <a href="{% url 'contacts:contact_list' %}" class="btn btn-sm btn-outline-secondary">Reset</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Contacts Table Card -->
+<div class="card bg-white border shadow-sm rounded-3 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light text-secondary small text-uppercase" style="letter-spacing: 0.04em;">
+                <tr>
+                    <th class="ps-4">Subscriber</th>
+                    <th>Normalized Phone</th>
+                    <th>Email</th>
+                    <th>Segment Groups</th>
+                    <th>Status</th>
+                    <th class="text-end pe-4">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for contact in page_obj %}
+                <tr>
+                    <td class="ps-4">
+                        <div class="d-flex align-items-center gap-2.5">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold font-mono shadow-sm" style="width: 34px; height: 34px; font-size: 0.75rem; background: linear-gradient(135deg, #4f46e5, #06b6d4);">
+                                {{ contact.name|slice:":1"|upper }}
+                            </div>
+                            <div>
+                                <div class="fw-semibold text-dark">{{ contact.name }}</div>
+                                <div class="text-muted" style="font-size: 0.72rem;">Added {{ contact.created_at|date:"M d, Y" }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="font-mono text-primary fw-medium px-2 py-1 rounded bg-primary-subtle" style="font-size: 0.8rem;">
+                            {{ contact.phone_number }}
+                        </span>
+                    </td>
+                    <td class="text-secondary small">{{ contact.email|default:"—" }}</td>
+                    <td>
+                        {% for mem in contact.group_memberships.all %}
+                        <span class="badge bg-light text-dark border font-mono">{{ mem.group.name }}</span>
+                        {% empty %}
+                        <span class="text-muted small">—</span>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {% if contact.is_subscribed %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle font-mono">
+                            <i class="bi bi-check-circle-fill me-1"></i>Active
+                        </span>
+                        {% else %}
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle font-mono">
+                            <i class="bi bi-dash-circle me-1"></i>Opted Out
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end pe-4">
+                        <div class="d-inline-flex gap-1">
+                            <a href="{% url 'contacts:contact_update' contact.id %}" class="btn btn-sm btn-outline-secondary py-1 px-2" title="Edit Contact">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form method="post" action="{% url 'contacts:contact_delete' contact.id %}" class="d-inline" onsubmit="return confirm('Delete contact {{ contact.name }} ({{ contact.phone_number }})?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2" title="Delete Contact">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-5 text-muted">
+                        <div class="mb-3">
+                            <i class="bi bi-people display-4 text-slate-300"></i>
+                        </div>
+                        <h6 class="fw-bold text-dark">No Contacts Found</h6>
+                        <p class="small text-secondary mb-3">Add contacts manually or upload a customer spreadsheet to get started.</p>
+                        <div class="d-flex justify-content-center gap-2">
+                            <a href="{% url 'contacts:contact_create' %}" class="btn btn-primary btn-sm">
+                                <i class="bi bi-person-plus me-1"></i> Add Contact
+                            </a>
+                            <a href="{% url 'contacts:contact_import' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-file-earmark-arrow-up me-1"></i> Import Spreadsheet
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center py-2.5 px-4">
+        <span class="small text-muted font-mono">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        </span>
+        <ul class="pagination pagination-sm mb-0">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_group %}&group={{ selected_group.id }}{% endif %}">&larr; Previous</a>
+            </li>
+            {% endif %}
+            <li class="page-item active"><span class="page-link font-mono">{{ page_obj.number }}</span></li>
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if selected_group %}&group={{ selected_group.id }}{% endif %}">Next &rarr;</a>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

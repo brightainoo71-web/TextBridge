@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Credit Ledger | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2">
+            <h4 class="fw-bold mb-0 text-dark tracking-tight">Cryptographic Credit Ledger</h4>
+            <span class="badge bg-secondary-subtle text-secondary border font-mono">Immutable</span>
+        </div>
+        <p class="text-secondary small mb-0 mt-1">Row-level locked ledger detailing all credit allocations, broadcast reservations, and refunds</p>
+    </div>
+    <div class="badge-balance fs-6 shadow-sm">
+        <i class="bi bi-wallet2 text-success"></i>
+        <span>Live Balance: <strong>{{ balance|default:0 }}</strong> Credits</span>
+    </div>
+</div>
+
+<div class="card bg-white border shadow-sm rounded-3 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light text-secondary small text-uppercase" style="letter-spacing: 0.04em;">
+                <tr>
+                    <th class="ps-4">Timestamp</th>
+                    <th>Transaction Type</th>
+                    <th>Delta Change</th>
+                    <th>Balance After</th>
+                    <th>Description</th>
+                    <th class="pe-4">Reference Key</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in entries %}
+                <tr>
+                    <td class="ps-4 text-secondary small font-mono">{{ entry.created_at|date:"M d, Y H:i:s" }}</td>
+                    <td>
+                        <span class="badge bg-light text-dark border font-mono">
+                            {{ entry.get_entry_type_display }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if entry.amount >= 0 %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle font-mono fw-bold">
+                            +{{ entry.amount }}
+                        </span>
+                        {% else %}
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle font-mono fw-bold">
+                            {{ entry.amount }}
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="font-mono fw-bold text-dark">{{ entry.balance_after }}</td>
+                    <td class="text-dark small">{{ entry.description }}</td>
+                    <td class="pe-4">
+                        <span class="font-mono text-muted small px-1.5 py-0.5 rounded bg-light border">
+                            {{ entry.reference_id }}
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-5 text-muted">
+                        <i class="bi bi-journal-text display-4 text-slate-300 d-block mb-3"></i>
+                        <h6 class="fw-bold text-dark">No Ledger Entries</h6>
+                        <p class="small text-secondary mb-0">Your wallet balance transactions will be logged here with strict non-negative invariants.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

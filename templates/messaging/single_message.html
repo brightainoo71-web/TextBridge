@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}Quick Single SMS | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6">
+        <div class="card p-4 p-md-5 bg-white border shadow-sm rounded-4 mb-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center border-bottom pb-3 mb-4 gap-2">
+                <div>
+                    <h4 class="fw-bold mb-1 text-dark tracking-tight">Quick Single SMS</h4>
+                    <p class="text-secondary small mb-0">Dispatch a priority transactional alert or test message to an individual phone</p>
+                </div>
+                <div class="badge-balance shadow-sm">
+                    <i class="bi bi-wallet2 text-success"></i>
+                    <span>Balance: <strong class="font-mono">{{ balance }}</strong> Credits</span>
+                </div>
+            </div>
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger py-2 small d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <div>{{ form.non_field_errors }}</div>
+                </div>
+                {% endif %}
+
+                <div class="mb-3.5">
+                    <label class="form-label small fw-semibold text-dark">Sender Header *</label>
+                    <select name="sender_id" class="form-select font-mono">
+                        {% for val, label in form.fields.sender_id.choices %}
+                        <option value="{{ val }}" {% if form.sender_id.value == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text small" style="font-size: 0.72rem;">Choose your verified brand name or an instant platform default.</div>
+                </div>
+
+                <div class="mb-3.5">
+                    <label class="form-label small fw-semibold text-dark">Recipient Phone Number (Ghana) *</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-muted border-end-0"><i class="bi bi-telephone-fill"></i></span>
+                        <input type="tel" inputmode="tel" name="recipient_phone" class="form-control font-mono border-start-0 {% if form.recipient_phone.errors %}is-invalid{% endif %}" value="{{ form.recipient_phone.value|default:'' }}" placeholder="e.g. 0244123456 or +233244123456" required>
+                    </div>
+                    {% for error in form.recipient_phone.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    <div class="form-text small" style="font-size: 0.72rem;">Accepts 024..., 050..., 020..., 027... Automatically normalized to 233XXXXXXXXX.</div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-semibold text-dark">Message Text *</label>
+                    <textarea name="message" id="singleMessageInput" rows="4" class="form-control font-mono {% if form.message.errors %}is-invalid{% endif %}" placeholder="Type your text message here..." required>{{ form.message.value|default:'' }}</textarea>
+                    {% for error in form.message.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-2 small text-secondary">
+                        <div>Characters: <strong id="charCount" class="text-dark font-mono">0</strong> / 160</div>
+                        <div class="badge bg-light text-dark border font-mono">1 SMS Credit</div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                    <a href="{% url 'analytics:customer_dashboard' %}" class="btn btn-outline-secondary">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary px-4 shadow-sm d-flex align-items-center gap-2">
+                        <i class="bi bi-send-fill"></i> Send Message
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const textarea = document.getElementById('singleMessageInput');
+    const charCount = document.getElementById('charCount');
+    if (textarea && charCount) {
+        function updateCount() {
+            charCount.textContent = textarea.value.length;
+        }
+        textarea.addEventListener('input', updateCount);
+        updateCount();
+    }
+});
+</script>
+{% endblock %}

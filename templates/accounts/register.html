@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+
+{% block title %}Register Business | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-4 py-md-5">
+    <div class="col-12 col-md-9 col-lg-7">
+        <!-- Auth Card -->
+        <div class="card p-4 p-md-5 bg-white border-0 shadow-lg rounded-4 position-relative overflow-hidden">
+            <!-- Top Gradient Glow Line -->
+            <div class="position-absolute top-0 start-0 w-100" style="height: 4px; background: linear-gradient(90deg, #4f46e5, #7c3aed, #06b6d4);"></div>
+
+            <div class="text-center mb-4 pt-2">
+                <div class="d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-3 p-3 mb-3 shadow-sm">
+                    <i class="bi bi-buildings-fill fs-2 text-primary"></i>
+                </div>
+                <h3 class="fw-bold text-dark tracking-tight mb-1">Create Your Workspace</h3>
+                <p class="text-secondary small">Set up enterprise-grade telecom SMS messaging for your organization</p>
+            </div>
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger py-2 small d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <div>{{ form.non_field_errors }}</div>
+                </div>
+                {% endif %}
+
+                <!-- Section 1 -->
+                <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                    <span class="badge bg-primary text-white rounded-pill px-2 py-1 font-mono">01</span>
+                    <h6 class="fw-bold text-dark mb-0">Business Profile</h6>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-dark">Business / Organization Legal Name *</label>
+                    <input type="text" name="business_name" class="form-control {% if form.business_name.errors %}is-invalid{% endif %}" value="{{ form.business_name.value|default:'' }}" placeholder="e.g. IronFit Gym, St. Luke Academy" required>
+                    {% for error in form.business_name.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold text-dark">Business Category *</label>
+                        <select name="business_category" class="form-select {% if form.business_category.errors %}is-invalid{% endif %}" required>
+                            {% for val, label in form.fields.business_category.choices %}
+                            <option value="{{ val }}" {% if form.business_category.value == val %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% for error in form.business_category.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold text-dark">Preferred Sender ID</label>
+                        <input type="text" name="preferred_sender_id" maxlength="11" class="form-control font-mono {% if form.preferred_sender_id.errors %}is-invalid{% endif %}" value="{{ form.preferred_sender_id.value|default:'' }}" placeholder="e.g. IRONFIT">
+                        <div class="form-text small" style="font-size: 0.72rem;">Max 11 alphanumeric chars. Regulated by NCA.</div>
+                        {% for error in form.preferred_sender_id.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+                </div>
+
+                <!-- Section 2 -->
+                <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                    <span class="badge bg-primary text-white rounded-pill px-2 py-1 font-mono">02</span>
+                    <h6 class="fw-bold text-dark mb-0">Workspace Administrator</h6>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold text-dark">First Name *</label>
+                        <input type="text" name="first_name" class="form-control {% if form.first_name.errors %}is-invalid{% endif %}" value="{{ form.first_name.value|default:'' }}" required>
+                        {% for error in form.first_name.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold text-dark">Last Name *</label>
+                        <input type="text" name="last_name" class="form-control {% if form.last_name.errors %}is-invalid{% endif %}" value="{{ form.last_name.value|default:'' }}" required>
+                        {% for error in form.last_name.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold text-dark">Email Address *</label>
+                        <input type="email" name="email" class="form-control {% if form.email.errors %}is-invalid{% endif %}" value="{{ form.email.value|default:'' }}" placeholder="owner@business.com" required>
+                        {% for error in form.email.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold text-dark">Phone Number (Ghana)</label>
+                        <input type="text" name="phone_number" class="form-control font-mono {% if form.phone_number.errors %}is-invalid{% endif %}" value="{{ form.phone_number.value|default:'' }}" placeholder="024XXXXXXX">
+                        {% for error in form.phone_number.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold text-dark">Account Password *</label>
+                        <input type="password" name="password" class="form-control {% if form.password.errors %}is-invalid{% endif %}" placeholder="Min. 8 characters" required>
+                        {% for error in form.password.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold text-dark">Confirm Password *</label>
+                        <input type="password" name="password_confirm" class="form-control {% if form.password_confirm.errors %}is-invalid{% endif %}" placeholder="Re-type password" required>
+                        {% for error in form.password_confirm.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+                </div>
+
+                <!-- Section 3: Terms -->
+                <div class="form-check mb-4 p-3 bg-light rounded border">
+                    <input class="form-check-input ms-0 me-2" type="checkbox" name="terms_accepted" id="termsCheck" required checked>
+                    <label class="form-check-label small text-secondary" for="termsCheck">
+                        I agree to the <span class="fw-semibold text-dark">Anti-Spam Compliance Policy</span> and the National Communications Authority (NCA) SMS transmission rules.
+                    </label>
+                </div>
+
+                <div class="d-grid mb-3">
+                    <button type="submit" class="btn btn-primary btn-lg shadow-sm fw-semibold">
+                        Launch TextBridge Workspace &rarr;
+                    </button>
+                </div>
+
+                <div class="text-center text-secondary small pt-2 border-top">
+                    Already registered? <a href="{% url 'accounts:login' %}" class="fw-semibold text-primary text-decoration-none">Sign in here</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

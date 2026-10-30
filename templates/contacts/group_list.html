@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}Contact Groups | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card p-4 bg-white shadow-sm">
+            <h5 class="fw-bold mb-1">Create Contact Group</h5>
+            <p class="text-secondary small mb-3">Organize your contacts (e.g. VIP Members, Morning Class, PTA Parents)</p>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Group Name *</label>
+                    <input type="text" name="name" class="form-control" placeholder="e.g. Gym Premium Tier" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Description (Optional)</label>
+                    <textarea name="description" class="form-control" rows="3" placeholder="Brief note on who belongs in this group"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Create Group</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card bg-white shadow-sm overflow-hidden">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0">Existing Contact Groups</h5>
+                <span class="badge bg-primary">{{ groups.count }} Total</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-secondary small text-uppercase">
+                        <tr>
+                            <th>Group Name</th>
+                            <th>Description</th>
+                            <th>Members</th>
+                            <th>Created</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for group in groups %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'contacts:contact_list' %}?group={{ group.id }}" class="fw-bold text-decoration-none text-dark">
+                                    <i class="bi bi-folder2-open text-primary me-1"></i> {{ group.name }}
+                                </a>
+                            </td>
+                            <td class="text-secondary small">{{ group.description|default:"—" }}</td>
+                            <td>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                    {{ group.member_count }} contacts
+                                </span>
+                            </td>
+                            <td class="text-muted small">{{ group.created_at|date:"M d, Y" }}</td>
+                            <td class="text-end">
+                                <form method="post" action="{% url 'contacts:group_delete' group.id %}" class="d-inline" onsubmit="return confirm('Delete this group? Contacts will NOT be deleted.');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-light border text-danger" title="Delete Group">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                <i class="bi bi-collection display-5 text-secondary opacity-50 d-block mb-2"></i>
+                                No groups created yet. Use the form on the left to create your first group.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

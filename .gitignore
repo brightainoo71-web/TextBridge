@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Environment Secrets & Keys (CRITICAL: NEVER COMMIT TO GIT)
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# IDEs & OS
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Celery & Testing
+celerybeat-schedule*
+.coverage
+htmlcov/
+.pytest_cache/

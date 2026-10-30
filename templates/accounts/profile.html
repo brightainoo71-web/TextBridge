@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}Business Profile | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card p-4 p-md-5 bg-white">
+            <h4 class="fw-bold mb-1">Business Profile Settings</h4>
+            <p class="text-secondary small mb-4">Manage your business details, default sender ID, and contact channels</p>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Business Name</label>
+                    <input type="text" name="name" class="form-control" value="{{ form.name.value|default:'' }}" required>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Business Category</label>
+                        <select name="category" class="form-select">
+                            {% for val, label in form.fields.category.choices %}
+                            <option value="{{ val }}" {% if form.category.value == val %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Default Sender ID (Max 11 chars)</label>
+                        <input type="text" name="preferred_sender_id" maxlength="11" class="form-control" value="{{ form.preferred_sender_id.value|default:'' }}">
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Contact Email</label>
+                        <input type="email" name="contact_email" class="form-control" value="{{ form.contact_email.value|default:'' }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Contact Phone</label>
+                        <input type="text" name="contact_phone" class="form-control" value="{{ form.contact_phone.value|default:'' }}" required>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Address</label>
+                        <input type="text" name="address" class="form-control" value="{{ form.address.value|default:'' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">City</label>
+                        <input type="text" name="city" class="form-control" value="{{ form.city.value|default:'' }}">
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{% url 'analytics:customer_dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

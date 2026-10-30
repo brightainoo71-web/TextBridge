@@ -1,0 +1,309 @@
+{% extends 'base.html' %}
+
+{% block title %}Compose Broadcast Campaign &bull; {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h4 class="fw-bold mb-1 text-slate-900">Broadcast Campaign Composer</h4>
+        <p class="text-secondary small mb-0">Craft and dispatch targeted, personalized bulk SMS across Ghana</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <div class="tb-balance-pill">
+            <i class="bi bi-wallet2 text-success"></i>
+            <span class="font-mono">{{ balance }}</span>
+            <span class="small text-muted fw-semibold">Credits Available</span>
+        </div>
+        <a href="{% url 'messaging:campaign_list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Campaigns
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Left Column: Studio Composer -->
+    <div class="col-lg-7">
+        <div class="card p-4 p-md-5 bg-white shadow-sm border-0">
+            <form method="post" id="campaignForm" novalidate>
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger py-2.5 small mb-4 border-0 shadow-sm">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                <!-- Campaign Title & Sender ID -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-7">
+                        <label class="form-label">Campaign Title *</label>
+                        <input type="text" name="title" id="campaignTitle" class="form-control {% if form.title.errors %}is-invalid{% endif %}" value="{{ form.title.value|default:'' }}" placeholder="e.g. November Flash Promo / Class Schedule" required>
+                        {% for error in form.title.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label">Sender ID *</label>
+                        <select name="sender_id" id="senderIdSelect" class="form-select font-mono fw-semibold">
+                            {% for val, label in form.fields.sender_id.choices %}
+                            <option value="{{ val }}" {% if form.sender_id.value == val %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text small"><a href="{% url 'messaging:sender_ids' %}" class="text-primary text-decoration-none">Manage Sender IDs &rarr;</a></div>
+                    </div>
+                </div>
+
+                <!-- Target Audience -->
+                <div class="mb-3">
+                    <label class="form-label">Target Audience / Contact Group *</label>
+                    <select name="target_group" class="form-select">
+                        <option value="">All Contacts (Entire Workspace Audience)</option>
+                        {% for g in form.fields.target_group.queryset %}
+                        <option value="{{ g.id }}" {% if form.target_group.value == g.id %}selected{% endif %}>
+                            {{ g.name }} ({{ g.member_count }} contacts)
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Message Composition Area -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label mb-0">SMS Message Content *</label>
+                        <div class="d-flex align-items-center gap-1">
+                            <span class="small text-muted me-1">Insert tag:</span>
+                            <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 tag-btn" data-tag="{% verbatim %}{{name}}{% endverbatim %}">{% verbatim %}{{name}}{% endverbatim %}</button>
+                            <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 tag-btn" data-tag="{% verbatim %}{{first_name}}{% endverbatim %}">{% verbatim %}{{first_name}}{% endverbatim %}</button>
+                            <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 tag-btn" data-tag="{% verbatim %}{{phone}}{% endverbatim %}">{% verbatim %}{{phone}}{% endverbatim %}</button>
+                        </div>
+                    </div>
+
+                    <textarea name="message_template" id="message_template" rows="6" class="form-control font-mono {% if form.message_template.errors %}is-invalid{% endif %}" placeholder="Hello {% verbatim %}{{first_name}}{% endverbatim %}, we have an important announcement..." required>{{ form.message_template.value|default:'' }}</textarea>
+                    {% for error in form.message_template.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+
+                    <!-- Dynamic Telecom Segment Counter -->
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mt-2.5 p-2.5 rounded bg-light border small text-secondary">
+                        <div class="d-flex align-items-center gap-3">
+                            <div>Characters: <strong id="charCount" class="text-dark font-mono">0</strong></div>
+                            <div>Segments: <strong id="segCount" class="text-primary font-mono fs-6">1</strong> SMS</div>
+                            <div>Left in segment: <strong id="charsLeft" class="text-dark font-mono">160</strong></div>
+                        </div>
+                        <div id="encodingBadge" class="badge bg-secondary-subtle text-secondary border font-mono">
+                            GSM 7-bit Encoding
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scheduling Box -->
+                <div class="p-3 mb-4 bg-light rounded border">
+                    <div class="form-check form-switch mb-1">
+                        <input class="form-check-input" type="checkbox" name="is_scheduled" id="is_scheduled" {% if form.is_scheduled.value %}checked{% endif %}>
+                        <label class="form-check-label fw-bold small text-dark" for="is_scheduled">
+                            <i class="bi bi-clock-history me-1"></i> Schedule Campaign for Later Date & Time
+                        </label>
+                    </div>
+                    <div id="scheduleBox" class="mt-2.5 {% if not form.is_scheduled.value %}d-none{% endif %}">
+                        <label class="form-label small text-muted">Dispatch Timestamp (Africa/Accra GMT)</label>
+                        <input type="datetime-local" name="scheduled_at" class="form-control form-control-sm" style="max-width: 320px;">
+                    </div>
+                </div>
+
+                <!-- Submit Action Bar -->
+                <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                    <a href="{% url 'messaging:campaign_list' %}" class="btn btn-outline-secondary">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary px-4 py-2 shadow-sm d-flex align-items-center gap-2" id="sendBtn" onclick="return confirm('Confirm dispatch of this campaign? Required SMS credits will be reserved from your balance.');">
+                        <i class="bi bi-send-fill"></i>
+                        <span>Dispatch Campaign</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Right Column: Live Smartphone Device Simulator -->
+    <div class="col-lg-5">
+        <div class="position-sticky" style="top: 85px;">
+            <div class="text-center mb-3">
+                <span class="small fw-bold text-uppercase text-muted tracking-wide">
+                    <i class="bi bi-phone me-1"></i> Live Recipient Preview
+                </span>
+            </div>
+
+            <!-- Mobile Device Mockup -->
+            <div class="tb-preview-phone shadow-lg mx-auto">
+                <div class="tb-preview-screen p-3">
+                    <!-- Top carrier bar -->
+                    <div class="d-flex justify-content-between align-items-center text-muted small pb-2 mb-2 border-bottom" style="font-size: 0.7rem;">
+                        <span class="font-mono">MTN Ghana / Telecel</span>
+                        <span class="fw-bold font-mono">Now</span>
+                        <span><i class="bi bi-wifi text-success me-1"></i><i class="bi bi-battery-full text-success"></i></span>
+                    </div>
+
+                    <!-- Header -->
+                    <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold font-mono" id="previewAvatar" style="width: 34px; height: 34px; font-size: 0.85rem;">
+                            TX
+                        </div>
+                        <div>
+                            <div class="fw-bold text-dark font-mono" id="previewSenderId" style="font-size: 0.885rem; line-height: 1.2;">
+                                TEXTBRIDGE
+                            </div>
+                            <div class="text-success" style="font-size: 0.68rem;">
+                                <i class="bi bi-shield-check"></i> Telecom Sender Verified
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Message Bubble -->
+                    <div class="bg-white p-3 rounded-3 border shadow-sm mb-3">
+                        <div class="small text-dark font-mono" id="previewBubbleText" style="white-space: pre-wrap; word-break: break-word; min-height: 80px; line-height: 1.5;">
+                            Type your message on the left to see the live preview...
+                        </div>
+                        <div class="text-end text-muted font-mono mt-2 pt-1 border-top" style="font-size: 0.68rem;">
+                            <span id="previewSegInfo">1 Segment</span> &bull; Ghana Telecom Delivered
+                        </div>
+                    </div>
+
+                    <!-- Live Quality Checklist -->
+                    <div class="p-2.5 rounded bg-white border">
+                        <div class="small fw-bold text-dark mb-1">Quality Assurance</div>
+                        <div class="d-flex flex-column gap-1 small text-muted font-mono" style="font-size: 0.725rem;">
+                            <div><i class="bi bi-check2 text-success me-1"></i> Alphanumeric Sender ID validated</div>
+                            <div><i class="bi bi-check2 text-success me-1"></i> Suppressed / opt-outs auto-excluded</div>
+                            <div><i class="bi bi-check2 text-success me-1"></i> Concurrency-safe ledger reservation</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const textarea = document.getElementById('message_template');
+        const charCount = document.getElementById('charCount');
+        const segCount = document.getElementById('segCount');
+        const charsLeft = document.getElementById('charsLeft');
+        const encodingBadge = document.getElementById('encodingBadge');
+        const scheduleSwitch = document.getElementById('is_scheduled');
+        const scheduleBox = document.getElementById('scheduleBox');
+        const tagButtons = document.querySelectorAll('.tag-btn');
+
+        const senderIdSelect = document.getElementById('senderIdSelect');
+        const previewSenderId = document.getElementById('previewSenderId');
+        const previewAvatar = document.getElementById('previewAvatar');
+        const previewBubbleText = document.getElementById('previewBubbleText');
+        const previewSegInfo = document.getElementById('previewSegInfo');
+
+        // Toggle Schedule Box
+        if (scheduleSwitch) {
+            scheduleSwitch.addEventListener('change', function() {
+                if (this.checked) {
+                    scheduleBox.classList.remove('d-none');
+                } else {
+                    scheduleBox.classList.add('d-none');
+                }
+            });
+        }
+
+        // Tag inserter
+        tagButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const tag = this.getAttribute('data-tag');
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                textarea.value = textarea.value.substring(0, start) + tag + textarea.value.substring(end);
+                textarea.focus();
+                textarea.setSelectionRange(start + tag.length, start + tag.length);
+                updateMetrics();
+            });
+        });
+
+        // Update Sender ID in preview
+        function updateSenderPreview() {
+            if (senderIdSelect && previewSenderId) {
+                const sid = senderIdSelect.value || "TEXTBRIDGE";
+                previewSenderId.textContent = sid;
+                previewAvatar.textContent = sid.slice(0, 2).toUpperCase();
+            }
+        }
+        if (senderIdSelect) {
+            senderIdSelect.addEventListener('change', updateSenderPreview);
+            updateSenderPreview();
+        }
+
+        // GSM 7-bit character sets
+        const gsmChars = "@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞ\x1bÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà";
+        const gsmExt = "^{}\\[~]|€";
+
+        function updateMetrics() {
+            const rawText = textarea.value;
+            let isUnicode = false;
+            let gsmCount = 0;
+
+            for (let i = 0; i < rawText.length; i++) {
+                const ch = rawText[i];
+                if (gsmChars.indexOf(ch) !== -1) {
+                    gsmCount += 1;
+                } else if (gsmExt.indexOf(ch) !== -1) {
+                    gsmCount += 2;
+                } else {
+                    isUnicode = true;
+                    break;
+                }
+            }
+
+            let segments = 1;
+            let remaining = 160;
+            let totalChars = rawText.length;
+
+            if (isUnicode) {
+                encodingBadge.textContent = "Unicode (UCS-2) Detected";
+                encodingBadge.className = "badge bg-warning-subtle text-warning-emphasis border border-warning-subtle font-mono";
+                if (totalChars <= 70) {
+                    segments = 1;
+                    remaining = 70 - totalChars;
+                } else {
+                    segments = Math.ceil(totalChars / 67);
+                    remaining = (segments * 67) - totalChars;
+                }
+            } else {
+                encodingBadge.textContent = "GSM 7-bit Encoding";
+                encodingBadge.className = "badge bg-secondary-subtle text-secondary border font-mono";
+                totalChars = gsmCount;
+                if (totalChars <= 160) {
+                    segments = 1;
+                    remaining = 160 - totalChars;
+                } else {
+                    segments = Math.ceil(totalChars / 153);
+                    remaining = (segments * 153) - totalChars;
+                }
+            }
+
+            charCount.textContent = totalChars;
+            segCount.textContent = Math.max(1, segments);
+            charsLeft.textContent = Math.max(0, remaining);
+
+            // Update live mobile phone preview bubble
+            if (rawText.trim().length > 0) {
+                // Render with sample personalization data
+                let samplePreview = rawText
+                    .replace(/\{\{name\}\}/g, "Kofi Mensah")
+                    .replace(/\{\{first_name\}\}/g, "Kofi")
+                    .replace(/\{\{phone\}\}/g, "0241234567");
+                previewBubbleText.textContent = samplePreview;
+            } else {
+                previewBubbleText.textContent = "Type your message on the left to see the live preview...";
+            }
+
+            if (previewSegInfo) {
+                previewSegInfo.textContent = `${Math.max(1, segments)} Segment${segments > 1 ? 's' : ''}`;
+            }
+        }
+
+        textarea.addEventListener('input', updateMetrics);
+        updateMetrics();
+    });
+</script>
+{% endblock %}

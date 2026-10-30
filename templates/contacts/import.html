@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block title %}Import Contacts | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card p-4 p-md-5 bg-white border shadow-sm rounded-4 mb-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center border-bottom pb-3 mb-4 gap-2">
+                <div>
+                    <h4 class="fw-bold mb-1 text-dark tracking-tight">Bulk Audience Importer</h4>
+                    <p class="text-secondary small mb-0">Upload subscriber spreadsheets with automatic Ghana telecom number sanitization (233XXXXXXXXX)</p>
+                </div>
+                <a href="{% url 'contacts:download_template' %}" class="btn btn-outline-success btn-sm d-flex align-items-center gap-1.5 shadow-sm">
+                    <i class="bi bi-file-earmark-spreadsheet"></i> Download Template (.csv)
+                </a>
+            </div>
+
+            <form method="post" enctype="multipart/form-data" novalidate>
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger py-2 small d-flex align-items-center gap-2 mb-4">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <div>{{ form.non_field_errors }}</div>
+                </div>
+                {% endif %}
+
+                <!-- File Upload Box -->
+                <div class="mb-4">
+                    <label class="form-label small fw-semibold text-dark">1. Upload Spreadsheet File (.csv, .xlsx) *</label>
+                    <div class="p-4 border-2 border-dashed rounded-3 bg-light text-center">
+                        <i class="bi bi-cloud-arrow-up display-5 text-primary mb-2 d-block"></i>
+                        <input type="file" name="file" class="form-control {% if form.file.errors %}is-invalid{% endif %}" accept=".csv, .xlsx" required style="max-width: 380px; margin: 0 auto;">
+                        <div class="form-text small mt-2">Required headers: <code class="font-mono">name</code>, <code class="font-mono">phone</code> (or <code class="font-mono">phone_number</code>), optional: <code class="font-mono">email</code>. Max 10MB.</div>
+                        {% for error in form.file.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+                </div>
+
+                <!-- Target Group -->
+                <div class="mb-4">
+                    <label class="form-label small fw-semibold text-dark">2. Automatically Enroll Into Group (Optional)</label>
+                    <select name="group" class="form-select">
+                        <option value="">-- Do Not Assign to a Group --</option>
+                        {% for g in form.fields.group.queryset %}
+                        <option value="{{ g.id }}">{{ g.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text small">All newly created records will be tagged into this audience segment.</div>
+                </div>
+
+                <!-- Duplicate Handling -->
+                <div class="mb-4">
+                    <label class="form-label small fw-semibold text-dark mb-2">3. Conflict Resolution Policy *</label>
+                    <div class="p-3 bg-light rounded-3 border">
+                        <div class="form-check mb-2.5">
+                            <input class="form-check-input" type="radio" name="duplicate_policy" id="policy_skip" value="SKIP" checked>
+                            <label class="form-check-label small" for="policy_skip">
+                                <strong class="text-dark">Skip duplicates (Safe / Recommended)</strong> &mdash; If a phone number already exists in your workspace, ignore it and preserve existing data.
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="duplicate_policy" id="policy_update" value="UPDATE">
+                            <label class="form-check-label small" for="policy_update">
+                                <strong class="text-dark">Upsert / Update records</strong> &mdash; Overwrite the name and email with the values from this spreadsheet.
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                    <a href="{% url 'contacts:contact_list' %}" class="btn btn-outline-secondary">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary px-4 shadow-sm d-flex align-items-center gap-2">
+                        <i class="bi bi-upload"></i> Process & Import Contacts
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Ghana Number Sanitization Info Card -->
+        <div class="card p-4 bg-light border shadow-none rounded-3 small">
+            <h6 class="fw-bold text-dark mb-2"><i class="bi bi-info-circle text-primary me-1"></i> Automatic Telecom Normalization Rules</h6>
+            <p class="text-secondary mb-2">Our ingestion engine automatically formats all standard Ghanaian phone numbers to international E.164 specifications:</p>
+            <div class="row g-2 font-mono" style="font-size: 0.775rem;">
+                <div class="col-sm-4"><span class="badge bg-white text-dark border w-100 p-2">0244123456 &rarr; 233244123456</span></div>
+                <div class="col-sm-4"><span class="badge bg-white text-dark border w-100 p-2">+233 50 123 4567 &rarr; 233501234567</span></div>
+                <div class="col-sm-4"><span class="badge bg-white text-dark border w-100 p-2">027 123 4567 &rarr; 233271234567</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
