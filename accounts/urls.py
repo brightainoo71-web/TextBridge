@@ -10,5 +10,7 @@ urlpatterns = [
     path('dashboard/', views.DashboardRedirectView.as_view(), name='dashboard_redirect'),
     path('onboarding/', views.OnboardingView.as_view(), name='onboarding'),
     path('profile/', views.BusinessProfileView.as_view(), name='profile'),
+    path('developer-keys/', views.DeveloperApiKeysView.as_view(), name='developer_keys'),
+    path('developer-keys/<int:pk>/revoke/', views.RevokeApiKeyView.as_view(), name='revoke_api_key'),
     path('suspended/', views.SuspendedNoticeView.as_view(), name='suspended_notice'),
 ]

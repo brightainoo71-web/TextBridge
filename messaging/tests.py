@@ -1,9 +1,10 @@
+import json
 from decimal import Decimal
 from django.test import TestCase, override_settings
-from accounts.models import User, Business
+from accounts.models import User, Business, APIKey
 from contacts.models import Contact, ContactGroup, ContactGroupMembership, SuppressionRecord
 from billing.ledger_service import CreditLedgerService
-from messaging.models import SMSCampaign, CampaignRecipient
+from messaging.models import SMSCampaign, CampaignRecipient, SenderID, SMSMessage
 from messaging.segmentation import calculate_sms_segments
 from messaging.providers import MockSMSProvider
 from messaging.campaign_service import CampaignService
@@ -153,3 +154,109 @@ class MessagingCampaignTests(TestCase):
 
         msg.refresh_from_db()
         self.assertEqual(msg.status, SMSMessage.Status.FAILED)
+
+
+@override_settings(ACTIVE_SMS_PROVIDER='MOCK')
+class DeveloperApiTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(email='developer@test.com', password='Password123!')
+        self.biz = Business.objects.create(name='Dev Startup', contact_email='developer@test.com', credit_balance=50)
+        self.api_key_obj, self.raw_key = APIKey.generate(self.biz, name="Production Bot Key")
+
+        # Approved sender IDs
+        self.default_sid = SenderID.objects.create(
+            sender_id='TextBridge',
+            status=SenderID.Status.APPROVED,
+            is_system_default=True
+        )
+        self.custom_sid = SenderID.objects.create(
+            business=self.biz,
+            sender_id='DEVSTARTUP',
+            status=SenderID.Status.APPROVED
+        )
+
+    def test_missing_api_key_returns_401(self):
+        resp = self.client.get('/api/v1/balance')
+        self.assertEqual(resp.status_code, 401)
+        self.assertEqual(resp.json()['error'], 'Unauthorized')
+
+    def test_invalid_api_key_returns_401(self):
+        resp = self.client.get('/api/v1/balance', HTTP_AUTHORIZATION='Bearer tb_live_invalidkey12345')
+        self.assertEqual(resp.status_code, 401)
+
+    def test_balance_endpoint_with_valid_bearer_token(self):
+        resp = self.client.get('/api/v1/balance', HTTP_AUTHORIZATION=f'Bearer {self.raw_key}')
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data['status'], 'success')
+        self.assertEqual(data['credit_balance'], 50)
+        self.assertEqual(data['business_name'], 'Dev Startup')
+
+    def test_balance_endpoint_with_x_api_key_header(self):
+        resp = self.client.get('/api/v1/balance', HTTP_X_API_KEY=self.raw_key)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()['credit_balance'], 50)
+
+    def test_send_sms_valid_dispatches_and_deducts(self):
+        payload = {
+            'recipient': '0241112233',
+            'message': 'Your verification OTP is 493021',
+            'sender_id': 'DEVSTARTUP'
+        }
+        resp = self.client.post(
+            '/api/v1/sms/send',
+            data=json.dumps(payload),
+            content_type='application/json',
+            HTTP_AUTHORIZATION=f'Bearer {self.raw_key}'
+        )
+        self.assertEqual(resp.status_code, 201)
+        data = resp.json()
+        self.assertEqual(data['status'], 'success')
+        self.assertEqual(data['recipient'], '233241112233')
+        self.assertEqual(data['sender_id'], 'DEVSTARTUP')
+        self.assertEqual(data['credits_deducted'], 1)
+        self.assertEqual(data['remaining_balance'], 49)
+
+        # Check database balance
+        self.biz.refresh_from_db()
+        self.assertEqual(self.biz.credit_balance, 49)
+
+    def test_send_sms_unapproved_sender_id_returns_403(self):
+        payload = {
+            'recipient': '0241112233',
+            'message': 'Testing unapproved sender',
+            'sender_id': 'STOLENID'
+        }
+        resp = self.client.post(
+            '/api/v1/sms/send',
+            data=json.dumps(payload),
+            content_type='application/json',
+            HTTP_AUTHORIZATION=f'Bearer {self.raw_key}'
+        )
+        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(resp.json()['error'], 'Forbidden')
+
+    def test_send_sms_insufficient_balance_returns_402(self):
+        self.biz.credit_balance = 0
+        self.biz.save()
+
+        payload = {
+            'recipient': '0241112233',
+            'message': 'Should fail due to zero balance',
+        }
+        resp = self.client.post(
+            '/api/v1/sms/send',
+            data=json.dumps(payload),
+            content_type='application/json',
+            HTTP_AUTHORIZATION=f'Bearer {self.raw_key}'
+        )
+        self.assertEqual(resp.status_code, 402)
+        self.assertEqual(resp.json()['error'], 'Payment Required')
+
+    def test_revoked_api_key_returns_401(self):
+        self.api_key_obj.is_active = False
+        self.api_key_obj.save()
+
+        resp = self.client.get('/api/v1/balance', HTTP_AUTHORIZATION=f'Bearer {self.raw_key}')
+        self.assertEqual(resp.status_code, 401)
+

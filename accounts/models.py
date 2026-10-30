@@ -139,3 +139,43 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"[{self.created_at:%Y-%m-%d %H:%M}] {self.action} - {self.description[:50]}"
+
+
+class APIKey(models.Model):
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='api_keys')
+    name = models.CharField(max_length=100, default='Default API Key')
+    prefix = models.CharField(max_length=16, db_index=True)  # e.g. 'tb_live_a1b2c3d4'
+    hashed_key = models.CharField(max_length=128)  # SHA-256 hash
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    @classmethod
+    def generate(cls, business, name="Default API Key"):
+        import secrets, hashlib
+        raw_token = secrets.token_hex(20)
+        raw_key = f"tb_live_{raw_token}"
+        prefix = raw_key[:16]
+        hashed = hashlib.sha256(raw_key.encode('utf-8')).hexdigest()
+        instance = cls.objects.create(
+            business=business,
+            name=name,
+            prefix=prefix,
+            hashed_key=hashed,
+            is_active=True
+        )
+        return instance, raw_key
+
+    def verify(self, raw_key: str) -> bool:
+        import secrets, hashlib
+        if not self.is_active:
+            return False
+        computed = hashlib.sha256(raw_key.encode('utf-8')).hexdigest()
+        return secrets.compare_digest(self.hashed_key, computed)
+
+    def __str__(self):
+        status = "Active" if self.is_active else "Revoked"
+        return f"{self.name} ({self.prefix}...) - {self.business.name} [{status}]"

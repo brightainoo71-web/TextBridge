@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+
+{% block title %}Developer API Keys | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2">
+            <h4 class="fw-bold mb-0 text-dark tracking-tight">Developer API & Webhooks</h4>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-mono">REST API v1</span>
+        </div>
+        <p class="text-secondary small mb-0 mt-1">Integrate programmatic telecom SMS into your apps, websites, and backend systems</p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-primary btn-sm d-flex align-items-center gap-1.5 shadow-sm" data-bs-toggle="modal" data-bs-target="#generateKeyModal">
+            <i class="bi bi-key-fill"></i> Generate Secret Key
+        </button>
+    </div>
+</div>
+
+<!-- Newly Generated Key Alert (Shown Only Once) -->
+{% if new_key %}
+<div class="alert alert-success border-2 border-success-subtle p-4 mb-4 rounded-3 shadow-sm">
+    <div class="d-flex align-items-start gap-3">
+        <i class="bi bi-shield-check display-6 text-success"></i>
+        <div class="flex-grow-1">
+            <h5 class="fw-bold text-dark mb-1">New Secret API Key Generated!</h5>
+            <p class="text-secondary small mb-3">
+                Please copy your secret key right now and store it in a secure password manager or environment file. For security reasons, <strong>we cannot show it to you again</strong>.
+            </p>
+            <div class="input-group" style="max-width: 600px;">
+                <input type="text" id="rawSecretKey" class="form-control font-mono bg-white fw-bold text-dark border-success" value="{{ new_key.raw_key }}" readonly>
+                <button class="btn btn-success px-3" type="button" onclick="copySecretKey()">
+                    <i class="bi bi-clipboard me-1"></i> Copy Secret Key
+                </button>
+            </div>
+            <div id="copyFeedback" class="small text-success mt-1 d-none fw-semibold">
+                <i class="bi bi-check2"></i> Copied to clipboard!
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- API Keys Table Card -->
+<div class="card bg-white border shadow-sm rounded-3 mb-4 overflow-hidden">
+    <div class="card-header bg-white py-3 px-4 border-bottom d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold text-dark mb-0">Active Secret Keys</h6>
+        <span class="badge bg-secondary-subtle text-secondary font-mono">{{ api_keys.count }} Key(s)</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light text-secondary small text-uppercase" style="letter-spacing: 0.04em;">
+                <tr>
+                    <th class="ps-4">Key Label</th>
+                    <th>Key Prefix</th>
+                    <th>Created</th>
+                    <th>Last Used</th>
+                    <th>Status</th>
+                    <th class="pe-4 text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key in api_keys %}
+                <tr>
+                    <td class="ps-4 fw-semibold text-dark">{{ key.name }}</td>
+                    <td>
+                        <span class="font-mono text-dark bg-light px-2 py-1 rounded border small">
+                            {{ key.prefix }}••••••••••••••••••••
+                        </span>
+                    </td>
+                    <td class="text-secondary small font-mono">{{ key.created_at|date:"M d, Y" }}</td>
+                    <td class="text-secondary small font-mono">
+                        {% if key.last_used_at %}{{ key.last_used_at|date:"M d, H:i" }}{% else %}<span class="text-muted">Never</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if key.is_active %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle font-mono">Active</span>
+                        {% else %}
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle font-mono">Revoked</span>
+                        {% endif %}
+                    </td>
+                    <td class="pe-4 text-end">
+                        {% if key.is_active %}
+                        <form method="post" action="{% url 'accounts:revoke_api_key' key.id %}" class="d-inline" onsubmit="return confirm('Revoke key \'{{ key.name }}\'? Applications using this key will immediately fail to authenticate.');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-danger btn-sm py-1 px-2.5">
+                                <i class="bi bi-slash-circle me-1"></i> Revoke
+                            </button>
+                        </form>
+                        {% else %}
+                        <span class="text-muted small">Disabled</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-5 text-muted">
+                        <i class="bi bi-key display-5 text-slate-300 d-block mb-2"></i>
+                        <h6 class="fw-bold text-dark">No API Keys Generated Yet</h6>
+                        <p class="small text-secondary mb-3">Create your first secret key to begin sending SMS programmatically from your backend.</p>
+                        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#generateKeyModal">
+                            <i class="bi bi-plus-circle me-1"></i> Generate Secret Key
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Interactive Code Quickstart & Documentation -->
+<div class="card bg-white border shadow-sm rounded-3 p-4 mb-4">
+    <div class="border-bottom pb-3 mb-4">
+        <h5 class="fw-bold text-dark mb-1">Developer API Quickstart</h5>
+        <p class="text-secondary small mb-0">Send transactional SMS over HTTP using standard JSON payloads</p>
+    </div>
+
+    <!-- Endpoint Specs -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="p-3 rounded-3 bg-light border">
+                <span class="badge bg-primary font-mono mb-2">POST</span>
+                <code class="font-mono text-dark fw-bold d-block">http://127.0.0.1:8000/api/v1/sms/send</code>
+                <span class="small text-muted mt-1 d-block">Dispatches a direct SMS to any phone in Ghana.</span>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="p-3 rounded-3 bg-light border">
+                <span class="badge bg-success font-mono mb-2">GET</span>
+                <code class="font-mono text-dark fw-bold d-block">http://127.0.0.1:8000/api/v1/balance</code>
+                <span class="small text-muted mt-1 d-block">Queries your real-time wallet SMS credit balance.</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Language Tabs -->
+    <ul class="nav nav-pills mb-3 gap-2" id="codeTabs" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active font-mono small py-1.5 px-3" id="curl-tab" data-bs-toggle="pill" data-bs-target="#curl-code" type="button">cURL</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link font-mono small py-1.5 px-3" id="python-tab" data-bs-toggle="pill" data-bs-target="#python-code" type="button">Python (requests)</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link font-mono small py-1.5 px-3" id="js-tab" data-bs-toggle="pill" data-bs-target="#js-code" type="button">Node.js / JS</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link font-mono small py-1.5 px-3" id="php-tab" data-bs-toggle="pill" data-bs-target="#php-code" type="button">PHP</button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="codeTabsContent">
+        <!-- cURL -->
+        <div class="tab-pane fade show active" id="curl-code">
+            <pre class="bg-dark text-light p-3 rounded-3 font-mono small mb-0" style="overflow-x: auto;"><code>curl -X POST http://127.0.0.1:8000/api/v1/sms/send \
+  -H "Authorization: Bearer tb_live_YOUR_SECRET_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "recipient": "0244123456",
+    "message": "Your verification code is 849204",
+    "sender_id": "Abtuniverse"
+  }'</code></pre>
+        </div>
+
+        <!-- Python -->
+        <div class="tab-pane fade" id="python-code">
+            <pre class="bg-dark text-light p-3 rounded-3 font-mono small mb-0" style="overflow-x: auto;"><code>import requests
+
+API_KEY = "tb_live_YOUR_SECRET_KEY"
+url = "http://127.0.0.1:8000/api/v1/sms/send"
+
+headers = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+}
+
+payload = {
+    "recipient": "0244123456",
+    "message": "Your verification code is 849204",
+    "sender_id": "Abtuniverse"
+}
+
+response = requests.post(url, json=payload, headers=headers)
+print(response.json())</code></pre>
+        </div>
+
+        <!-- Node.js / JavaScript -->
+        <div class="tab-pane fade" id="js-code">
+            <pre class="bg-dark text-light p-3 rounded-3 font-mono small mb-0" style="overflow-x: auto;"><code>const apiKey = 'tb_live_YOUR_SECRET_KEY';
+
+fetch('http://127.0.0.1:8000/api/v1/sms/send', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${apiKey}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    recipient: '0244123456',
+    message: 'Your verification code is 849204',
+    sender_id: 'Abtuniverse'
+  })
+})
+.then(res => res.json())
+.then(data => console.log(data))
+.catch(err => console.error(err));</code></pre>
+        </div>
+
+        <!-- PHP -->
+        <div class="tab-pane fade" id="php-code">
+            <pre class="bg-dark text-light p-3 rounded-3 font-mono small mb-0" style="overflow-x: auto;"><code>&lt;?php
+$apiKey = "tb_live_YOUR_SECRET_KEY";
+$data = [
+    "recipient" => "0244123456",
+    "message"   => "Your verification code is 849204",
+    "sender_id" => "Abtuniverse"
+];
+
+$ch = curl_init("http://127.0.0.1:8000/api/v1/sms/send");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Authorization: Bearer " . $apiKey,
+    "Content-Type: application/json"
+]);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+
+$response = curl_exec($ch);
+curl_close($ch);
+echo $response;</code></pre>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Generate API Key -->
+<div class="modal fade" id="generateKeyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-bottom pb-3">
+                <h5 class="modal-title fw-bold text-dark">Generate Secret API Key</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'accounts:developer_keys' %}">
+                {% csrf_token %}
+                <div class="modal-body py-4">
+                    <p class="text-secondary small mb-3">
+                        Give your key an identifiable label (e.g. <em>Production Backend</em>, <em>Shopify Webhook</em>, <em>Staging App</em>).
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-dark">Key Name / Description *</label>
+                        <input type="text" name="name" class="form-control" placeholder="e.g. Production Mobile App" required autofocus>
+                    </div>
+                </div>
+                <div class="modal-footer border-top pt-3">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm px-4">Generate Key &rarr;</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function copySecretKey() {
+    const input = document.getElementById('rawSecretKey');
+    if (!input) return;
+    input.select();
+    input.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(input.value).then(function() {
+        const feedback = document.getElementById('copyFeedback');
+        if (feedback) feedback.classList.remove('d-none');
+    });
+}
+</script>
+{% endblock %}

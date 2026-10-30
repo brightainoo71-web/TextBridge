@@ -66,6 +66,7 @@
                     <li class="nav-item"><a class="nav-link py-2" href="{% url 'contacts:contact_list' %}"><i class="bi bi-people me-2"></i> Audience & Contacts</a></li>
                     <li class="nav-item"><a class="nav-link py-2" href="{% url 'billing:packages' %}"><i class="bi bi-cart3 me-2"></i> Buy SMS Packages</a></li>
                     <li class="nav-item"><a class="nav-link py-2" href="{% url 'billing:credit_ledger' %}"><i class="bi bi-receipt me-2"></i> Credit Ledger</a></li>
+                    <li class="nav-item"><a class="nav-link py-2" href="{% url 'accounts:developer_keys' %}"><i class="bi bi-code-slash me-2 text-primary"></i> Developer REST API</a></li>
                     {% endif %}
                 </ul>
 
@@ -99,6 +100,7 @@
                                 <div class="text-muted small">{{ current_business.get_category_display }}</div>
                             </li>
                             <li><a class="dropdown-item rounded py-2 small" href="{% url 'accounts:profile' %}"><i class="bi bi-sliders me-2 text-primary"></i> Workspace Settings</a></li>
+                            <li><a class="dropdown-item rounded py-2 small" href="{% url 'accounts:developer_keys' %}"><i class="bi bi-code-slash me-2 text-primary"></i> Developer REST API</a></li>
                             <li><a class="dropdown-item rounded py-2 small" href="{% url 'messaging:sender_ids' %}"><i class="bi bi-tag me-2 text-primary"></i> Sender IDs</a></li>
                             <li><a class="dropdown-item rounded py-2 small" href="{% url 'billing:purchase_history' %}"><i class="bi bi-clock-history me-2 text-primary"></i> Purchase History</a></li>
                             <li><a class="dropdown-item rounded py-2 small" href="{% url 'accounts:onboarding' %}"><i class="bi bi-check2-circle me-2 text-primary"></i> Onboarding Checklist</a></li>
@@ -236,6 +238,17 @@
                         <li class="nav-item">
                             <a class="nav-link {% if request.resolver_match.url_name == 'purchase_history' %}active{% endif %}" href="{% url 'billing:purchase_history' %}">
                                 <i class="bi bi-clock-history"></i> Invoices & Orders
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="mb-3">
+                    <div class="tb-sidebar-heading">Developers & Integration</div>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'developer_keys' %}active{% endif %}" href="{% url 'accounts:developer_keys' %}">
+                                <i class="bi bi-code-slash"></i> API Keys & Docs
                             </a>
                         </li>
                     </ul>

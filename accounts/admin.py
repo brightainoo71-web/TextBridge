@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, Business, BusinessMembership, AuditLog
+from .models import User, Business, BusinessMembership, AuditLog, APIKey
 
 
 @admin.register(User)
@@ -45,3 +45,12 @@ class AuditLogAdmin(admin.ModelAdmin):
     list_filter = ('action', 'created_at')
     search_fields = ('description', 'actor__email', 'business__name')
     readonly_fields = ('created_at',)
+
+
+@admin.register(APIKey)
+class APIKeyAdmin(admin.ModelAdmin):
+    list_display = ('name', 'prefix', 'business', 'is_active', 'created_at', 'last_used_at')
+    list_filter = ('is_active', 'created_at')
+    search_fields = ('name', 'prefix', 'business__name')
+    readonly_fields = ('prefix', 'hashed_key', 'created_at', 'last_used_at')
+

@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.db import transaction
 from django.views.generic import View, TemplateView
 from .forms import RegistrationForm, BusinessProfileForm
-from .models import User, Business, BusinessMembership, AuditLog
+from .models import User, Business, BusinessMembership, AuditLog, APIKey
 from .decorators import tenant_required
 from messaging.models import SenderID
 
@@ -186,3 +186,40 @@ class BusinessProfileView(View):
 
 class SuspendedNoticeView(TemplateView):
     template_name = 'accounts/suspended_notice.html'
+
+
+class DeveloperApiKeysView(View):
+    @tenant_required
+    def get(self, request):
+        business = request.business
+        api_keys = business.api_keys.all()
+        new_key = request.session.pop('newly_generated_api_key', None)
+        return render(request, 'accounts/developer_keys.html', {
+            'business': business,
+            'api_keys': api_keys,
+            'new_key': new_key
+        })
+
+    @tenant_required
+    def post(self, request):
+        business = request.business
+        key_name = request.POST.get('name', '').strip() or 'Live Secret Key'
+        instance, raw_key = APIKey.generate(business=business, name=key_name)
+        request.session['newly_generated_api_key'] = {
+            'name': instance.name,
+            'raw_key': raw_key,
+            'prefix': instance.prefix
+        }
+        messages.success(request, f"New API key '{instance.name}' generated! Copy it now as it won't be shown again.")
+        return redirect('accounts:developer_keys')
+
+
+class RevokeApiKeyView(View):
+    @tenant_required
+    def post(self, request, pk):
+        business = request.business
+        key = get_object_or_404(APIKey, pk=pk, business=business)
+        key.is_active = False
+        key.save(update_fields=['is_active'])
+        messages.warning(request, f"API key '{key.name}' ({key.prefix}...) has been revoked.")
+        return redirect('accounts:developer_keys')
