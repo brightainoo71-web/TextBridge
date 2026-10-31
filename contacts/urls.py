@@ -14,4 +14,7 @@ urlpatterns = [
     path('template/', views.DownloadSampleTemplateView.as_view(), name='download_template'),
     path('suppression/', views.SuppressionListView.as_view(), name='suppression_list'),
     path('suppression/<int:pk>/delete/', views.SuppressionDeleteView.as_view(), name='suppression_delete'),
+    path('export/', views.ContactExportView.as_view(), name='contact_export'),
+    path('birthdays/', views.BirthdayAutomationView.as_view(), name='birthday_automation'),
+    path('birthdays/test/', views.BirthdayTestDispatchView.as_view(), name='birthday_test_dispatch'),
 ]

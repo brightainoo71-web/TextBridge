@@ -1,3 +1,4 @@
+import csv
 import json
 import logging
 from django.conf import settings
@@ -151,6 +152,49 @@ class CampaignCancelView(View):
         else:
             messages.error(request, "Only scheduled, queued, or draft campaigns can be cancelled.")
         return redirect('messaging:campaign_detail', pk=campaign.id)
+
+
+class CampaignExportView(View):
+    @tenant_required
+    def get(self, request, pk):
+        business = request.business
+        campaign = get_object_or_404(SMSCampaign, pk=pk, business=business)
+        recipients = campaign.recipients.all().order_by('id')
+
+        now_str = timezone.now().strftime('%Y%m%d')
+        safe_title = "".join(c for c in campaign.title if c.isalnum() or c in (' ', '_', '-')).strip().replace(' ', '_')
+        filename = f"TextBridge_Campaign_{campaign.id}_{safe_title}_{now_str}.csv"
+
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        writer = csv.writer(response)
+        writer.writerow([
+            'Recipient Name',
+            'Phone Number',
+            'Message Content',
+            'Segments',
+            'Credits Used',
+            'Status',
+            'Gateway Message ID',
+            'Error Detail',
+            'Last Updated'
+        ])
+
+        for r in recipients.iterator():
+            writer.writerow([
+                r.recipient_name,
+                r.phone_number,
+                r.rendered_message,
+                r.segments_count,
+                r.credits_used,
+                r.status,
+                r.provider_message_id or '',
+                r.error_message or '',
+                r.updated_at.strftime('%Y-%m-%d %H:%M:%S')
+            ])
+
+        return response
 
 
 class SenderIDListView(View):

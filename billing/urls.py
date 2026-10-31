@@ -11,4 +11,5 @@ urlpatterns = [
     path('webhook/paystack/', views.PaystackWebhookView.as_view(), name='paystack_webhook'),
     path('purchases/', views.PurchaseHistoryView.as_view(), name='purchase_history'),
     path('ledger/', views.CreditLedgerView.as_view(), name='credit_ledger'),
+    path('ledger/export/', views.LedgerExportView.as_view(), name='ledger_export'),
 ]

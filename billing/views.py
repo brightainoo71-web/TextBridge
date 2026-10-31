@@ -1,3 +1,4 @@
+import csv
 import uuid
 import json
 from decimal import Decimal
@@ -256,3 +257,43 @@ class CreditLedgerView(View):
             'entries': entries,
             'balance': business.credit_balance
         })
+
+
+class LedgerExportView(View):
+    @tenant_required
+    def get(self, request):
+        business = request.business
+        entries = CreditLedgerEntry.objects.filter(business=business).order_by('-created_at')
+
+        now_str = timezone.now().strftime('%Y%m%d_%H%M')
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="TextBridge_Credit_Ledger_{now_str}.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow([
+            'Reference ID',
+            'Entry Type',
+            'Amount',
+            'Balance After',
+            'Description',
+            'Purchase Reference',
+            'Actor',
+            'Timestamp'
+        ])
+
+        for e in entries.iterator():
+            purchase_ref = e.purchase.payment_reference if e.purchase else ''
+            actor_name = e.actor.get_full_name() or e.actor.email if e.actor else 'System'
+            writer.writerow([
+                e.reference_id,
+                e.entry_type,
+                e.amount,
+                e.balance_after,
+                e.description,
+                purchase_ref,
+                actor_name,
+                e.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            ])
+
+        return response
+

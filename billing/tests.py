@@ -148,3 +148,24 @@ class CreditLedgerAndBillingTests(TestCase):
         self.biz.refresh_from_db()
         self.assertEqual(self.biz.credit_balance, 500)
 
+    def test_ledger_csv_export(self):
+        BusinessMembership.objects.create(user=self.user, business=self.biz, role='OWNER')
+        CreditLedgerService.record_entry(
+            business_id=self.biz.id,
+            entry_type='PURCHASE_CREDIT',
+            amount=500,
+            reference_id='TX_EXPORT_001',
+            description='Export test credit purchase',
+            actor=self.user
+        )
+
+        client = Client()
+        client.login(username='test@business.com', password='Password123!')
+        resp = client.get('/billing/ledger/export/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'text/csv; charset=utf-8')
+        content = resp.content.decode('utf-8')
+        self.assertIn('Reference ID,Entry Type,Amount,Balance After,Description,Purchase Reference,Actor,Timestamp', content)
+        self.assertIn('TX_EXPORT_001,PURCHASE_CREDIT,500,500,Export test credit purchase', content)
+
+

@@ -215,6 +215,11 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'birthday_automation' %}active{% endif %}" href="{% url 'contacts:birthday_automation' %}">
+                                <i class="bi bi-cake2"></i> Birthday Automation
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link {% if request.resolver_match.url_name == 'contact_import' %}active{% endif %}" href="{% url 'contacts:contact_import' %}">
                                 <i class="bi bi-cloud-arrow-up"></i> Import Spreadsheet
                             </a>

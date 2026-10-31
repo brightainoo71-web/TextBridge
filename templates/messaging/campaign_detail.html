@@ -44,6 +44,9 @@
             </button>
         </form>
         {% endif %}
+        <a href="{% url 'messaging:campaign_export' campaign.id %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-download me-1"></i> Export CSV Report
+        </a>
         <a href="{% url 'messaging:campaign_list' %}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left me-1"></i> Back to Campaigns
         </a>

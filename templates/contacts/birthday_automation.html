@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+
+{% block title %}Birthday Automation | {{ PLATFORM_NAME }}{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2">
+            <h4 class="fw-bold mb-0 text-dark tracking-tight">Automated Birthday Greetings</h4>
+            {% if automation.is_enabled %}
+            <span class="badge bg-success font-mono"><i class="bi bi-broadcast me-1"></i>Active</span>
+            {% else %}
+            <span class="badge bg-secondary-subtle text-secondary border font-mono">Paused</span>
+            {% endif %}
+        </div>
+        <p class="text-secondary small mb-0 mt-1">
+            Automatically celebrate customer birthdays daily at a scheduled hour with personalized Ghanaian SMS.
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'contacts:contact_list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-people me-1"></i> Manage Contacts
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Configuration Column -->
+    <div class="col-lg-7">
+        <div class="card border shadow-sm rounded-3">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                    <i class="bi bi-gear-wide-connected text-primary"></i>
+                    Automation Dispatch Rules
+                </h6>
+            </div>
+            <div class="card-body p-4">
+                <form method="post" action="{% url 'contacts:birthday_automation' %}" id="birthdayConfigForm">
+                    {% csrf_token %}
+
+                    <!-- Enable/Disable Switch -->
+                    <div class="form-check form-switch p-3 bg-light rounded-3 border mb-3">
+                        <input class="form-check-input ms-0 me-3" type="checkbox" role="switch" id="id_is_enabled" name="is_enabled" {% if form.is_enabled.value %}checked{% endif %} style="width: 2.5em; height: 1.3em;">
+                        <label class="form-check-label fw-bold text-dark" for="id_is_enabled">
+                            Enable Daily Automated Birthday SMS
+                        </label>
+                        <div class="text-muted small mt-1 ms-5">
+                            When enabled, TextBridge checks your audience daily and broadcasts greetings at the specified dispatch time.
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-dark small">Sender ID</label>
+                            {{ form.sender_id }}
+                            {% if form.sender_id.errors %}
+                            <div class="text-danger small mt-1">{{ form.sender_id.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text small">Your registered brand Sender ID.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold text-dark small">Daily Dispatch Time (Ghana GMT)</label>
+                            {{ form.dispatch_time }}
+                            {% if form.dispatch_time.errors %}
+                            <div class="text-danger small mt-1">{{ form.dispatch_time.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text small">Recommended: 08:00 AM to 09:30 AM.</div>
+                        </div>
+                    </div>
+
+                    <!-- Message Template -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label fw-semibold text-dark small mb-0">Birthday SMS Template</label>
+                            <span class="small text-muted font-mono" id="charCounter">0 chars &bull; 1 segment</span>
+                        </div>
+                        {{ form.message_template }}
+                        {% if form.message_template.errors %}
+                        <div class="text-danger small mt-1">{{ form.message_template.errors.0 }}</div>
+                        {% endif %}
+
+                        <!-- Tag Pills -->
+                        <div class="mt-2 d-flex flex-wrap align-items-center gap-1.5">
+                            <span class="text-secondary small me-1">Insert Dynamic Tag:</span>
+                            <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 tag-pill" data-tag="\{\{first_name\}\}">
+                                + \{\{first_name\}\}
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 tag-pill" data-tag="\{\{name\}\}">
+                                + \{\{name\}\}
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 tag-pill" data-tag="\{\{business_name\}\}">
+                                + \{\{business_name\}\}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Last Run Metadata -->
+                    {% if automation.last_run_date %}
+                    <div class="p-2.5 bg-light border rounded-2 small text-muted mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-clock-history text-secondary"></i>
+                        <span>Last automated run completed: <strong>{{ automation.last_run_date|date:"F d, Y" }}</strong></span>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-end gap-2 pt-2">
+                        <button type="submit" class="btn btn-primary px-4 fw-medium shadow-sm">
+                            <i class="bi bi-save me-1"></i> Save Configuration
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Test Dispatch Card -->
+        <div class="card border shadow-sm rounded-3 mt-4">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                    <i class="bi bi-send text-info"></i>
+                    Send Live Test Greeting
+                </h6>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-secondary small mb-3">
+                    Transmit a live test birthday greeting to your own phone number to preview delivery, sender branding, and placeholder substitution.
+                </p>
+                <form method="post" action="{% url 'contacts:birthday_test_dispatch' %}" class="row g-2 align-items-center">
+                    {% csrf_token %}
+                    <div class="col-sm-8">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white text-muted"><i class="bi bi-telephone"></i></span>
+                            <input type="text" name="test_phone" class="form-control" placeholder="e.g. 0241234567 or 233540000000" required>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <button type="submit" class="btn btn-outline-info w-100 fw-medium">
+                            <i class="bi bi-send-fill me-1"></i> Send Test
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upcoming Birthdays & Insights Column -->
+    <div class="col-lg-5">
+        <!-- Upcoming 14 Days Card -->
+        <div class="card border shadow-sm rounded-3">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                    <i class="bi bi-cake2-fill text-warning"></i>
+                    Upcoming in Next 14 Days
+                </h6>
+                <span class="badge bg-warning-subtle text-dark border font-mono">{{ upcoming_birthdays|length }}</span>
+            </div>
+            <div class="card-body p-0">
+                {% if upcoming_birthdays %}
+                <div class="list-group list-group-flush">
+                    {% for item in upcoming_birthdays %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-2.5 px-3">
+                        <div>
+                            <div class="fw-bold text-dark small">{{ item.contact.name }}</div>
+                            <div class="text-secondary font-mono small">{{ item.contact.phone_number }}</div>
+                        </div>
+                        <div class="text-end">
+                            {% if item.is_today %}
+                            <span class="badge bg-success font-mono animate-pulse">
+                                <i class="bi bi-gift-fill me-1"></i> Today!
+                            </span>
+                            {% else %}
+                            <span class="badge bg-light text-dark border font-mono">
+                                in {{ item.days_remaining }} day{{ item.days_remaining|pluralize }}
+                            </span>
+                            {% endif %}
+                            <div class="text-muted small mt-0.5">{{ item.birthday_date|date:"M d" }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="p-4 text-center text-muted">
+                    <i class="bi bi-calendar-heart fs-2 text-secondary opacity-50 d-block mb-2"></i>
+                    <p class="small mb-1">No birthdays recorded within the next 14 days.</p>
+                    <p class="small text-secondary mb-0">Add birth dates to your contacts or import a customer list with birth dates.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Birthday Dispatches Card -->
+        <div class="card border shadow-sm rounded-3 mt-4">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                    <i class="bi bi-clock-history text-secondary"></i>
+                    Recent Birthday Transmissions
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_dispatches %}
+                <div class="list-group list-group-flush">
+                    {% for msg in recent_dispatches %}
+                    <div class="list-group-item py-2.5 px-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="font-mono text-dark fw-bold small">{{ msg.recipient_phone }}</span>
+                            {% if msg.status == 'DELIVERED' %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle font-mono small">Delivered</span>
+                            {% elif msg.status == 'FAILED' %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle font-mono small">Failed</span>
+                            {% else %}
+                            <span class="badge bg-light text-dark border font-mono small">{{ msg.status }}</span>
+                            {% endif %}
+                        </div>
+                        <p class="text-muted small mb-1 text-truncate">{{ msg.message }}</p>
+                        <div class="text-secondary small font-mono">{{ msg.created_at|date:"M d, Y H:i" }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="p-4 text-center text-muted">
+                    <p class="small mb-0">No birthday messages dispatched yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const textarea = document.getElementById('id_message_template');
+    const counter = document.getElementById('charCounter');
+    const tagPills = document.querySelectorAll('.tag-pill');
+
+    function updateCounter() {
+        if (!textarea || !counter) return;
+        const text = textarea.value || '';
+        const len = text.length;
+        const segments = len === 0 ? 1 : Math.ceil(len / 160);
+        counter.textContent = `${len} char${len === 1 ? '' : 's'} • ${segments} segment${segments === 1 ? '' : 's'}`;
+    }
+
+    if (textarea) {
+        textarea.addEventListener('input', updateCounter);
+        updateCounter();
+    }
+
+    tagPills.forEach(pill => {
+        pill.addEventListener('click', function () {
+            const tag = this.getAttribute('data-tag');
+            if (!textarea || !tag) return;
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const val = textarea.value;
+            textarea.value = val.substring(0, start) + tag + val.substring(end);
+            textarea.focus();
+            textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+            updateCounter();
+        });
+    });
+});
+</script>
+{% endblock %}

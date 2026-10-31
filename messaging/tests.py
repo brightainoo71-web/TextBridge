@@ -160,6 +160,37 @@ class MessagingCampaignTests(TestCase):
         msg.refresh_from_db()
         self.assertEqual(msg.status, SMSMessage.Status.FAILED)
 
+    def test_campaign_csv_export(self):
+        from accounts.models import BusinessMembership
+        BusinessMembership.objects.create(user=self.user, business=self.biz, role='OWNER')
+        self.client.login(username='biz@test.com', password='Password123!')
+
+        campaign = SMSCampaign.objects.create(
+            business=self.biz,
+            title='Mega Promo Broadcast',
+            sender_id='TESTBIZ',
+            message_template='Special Offer!',
+            status=SMSCampaign.Status.COMPLETED
+        )
+        CampaignRecipient.objects.create(
+            campaign=campaign,
+            recipient_name='Kofi Mensah',
+            phone_number='233241112233',
+            rendered_message='Special Offer!',
+            segments_count=1,
+            credits_used=1,
+            status=CampaignRecipient.Status.DELIVERED,
+            provider_message_id='GATEWAY_999'
+        )
+
+        resp = self.client.get(f'/messaging/campaigns/{campaign.id}/export/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'text/csv; charset=utf-8')
+        content = resp.content.decode('utf-8')
+        self.assertIn('Recipient Name,Phone Number,Message Content,Segments,Credits Used,Status,Gateway Message ID,Error Detail,Last Updated', content)
+        self.assertIn('Kofi Mensah,233241112233,Special Offer!,1,1,DELIVERED,GATEWAY_999', content)
+
+
 
 @override_settings(ACTIVE_SMS_PROVIDER='MOCK')
 class DeveloperApiTests(TestCase):

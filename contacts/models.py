@@ -27,6 +27,7 @@ class Contact(models.Model):
     phone_number = models.CharField(max_length=25, help_text="Normalized format: 233XXXXXXXXX")
     email = models.EmailField(blank=True, null=True)
     custom_attributes = models.JSONField(default=dict, blank=True)
+    birth_date = models.DateField(null=True, blank=True, help_text="Contact date of birth for automated greetings")
     is_subscribed = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -92,3 +93,20 @@ class ConsentRecord(models.Model):
 
     def __str__(self):
         return f"Consent for {self.contact.phone_number}: {self.lawful_basis}"
+
+
+class BirthdayAutomation(models.Model):
+    business = models.OneToOneField(Business, on_delete=models.CASCADE, related_name='birthday_automation')
+    is_enabled = models.BooleanField(default=False)
+    sender_id = models.CharField(max_length=11, blank=True, help_text="Custom or system default Sender ID")
+    dispatch_time = models.TimeField(default='08:00:00', help_text="Time of day to send birthday greetings (local time)")
+    message_template = models.TextField(
+        default="Happy Birthday {{first_name}}! 🎉 Wishing you continued health, joy, and prosperity from all of us at {{business_name}}."
+    )
+    last_run_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        status = "Active" if self.is_enabled else "Paused"
+        return f"Birthday Automation ({self.business.name}) [{status}]"
