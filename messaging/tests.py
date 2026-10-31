@@ -7,7 +7,7 @@ from accounts.models import User, Business, APIKey, BusinessMembership
 from contacts.models import Contact, ContactGroup, ContactGroupMembership, SuppressionRecord
 from billing.ledger_service import CreditLedgerService
 from unittest.mock import patch, MagicMock
-from messaging.models import SMSCampaign, CampaignRecipient, SenderID, SMSMessage, WebhookEndpoint, WebhookDelivery
+from messaging.models import SMSCampaign, CampaignRecipient, SenderID, SMSMessage, WebhookEndpoint, WebhookDelivery, SMSTemplate
 from messaging.webhook_service import WebhookService
 from messaging.forms import CampaignComposeForm
 from messaging.segmentation import calculate_sms_segments
@@ -466,3 +466,83 @@ class OutboundWebhookTests(TestCase):
         self.assertTrue(delivery.is_success)
         self.assertEqual(delivery.event_type, 'endpoint.test_ping')
         self.assertEqual(WebhookDelivery.objects.filter(endpoint=self.endpoint).count(), 1)
+
+
+@override_settings(ACTIVE_SMS_PROVIDER='MOCK')
+class SMSTemplateTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(email='tpl_user@test.com', password='Password123!')
+        self.biz = Business.objects.create(name='Template Biz', contact_email='tpl_user@test.com', credit_balance=50)
+        BusinessMembership.objects.create(user=self.user, business=self.biz, role=BusinessMembership.Role.OWNER)
+
+        self.preset = SMSTemplate.objects.create(
+            business=None,
+            title='Default Welcome',
+            category=SMSTemplate.Category.ONBOARDING,
+            content='Welcome {{first_name}}!',
+            is_system_preset=True
+        )
+        self.custom = SMSTemplate.objects.create(
+            business=self.biz,
+            title='My Custom Promo',
+            category=SMSTemplate.Category.MARKETING,
+            content='Special 20% off for {{name}}!',
+            is_system_preset=False
+        )
+
+    def test_template_list_view(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session['active_business_id'] = self.biz.id
+        session.save()
+
+        resp = self.client.get('/messaging/templates/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Default Welcome')
+        self.assertContains(resp, 'My Custom Promo')
+
+    def test_template_create_view(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session['active_business_id'] = self.biz.id
+        session.save()
+
+        resp = self.client.post('/messaging/templates/new/', {
+            'title': 'Appointment Notice',
+            'category': 'REMINDERS',
+            'content': 'Hi {{name}}, your class is at 6pm.'
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(SMSTemplate.objects.filter(business=self.biz, title='Appointment Notice').exists())
+
+    def test_template_delete_view(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session['active_business_id'] = self.biz.id
+        session.save()
+
+        resp = self.client.post(f'/messaging/templates/{self.custom.id}/delete/')
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(SMSTemplate.objects.filter(id=self.custom.id).exists())
+
+    def test_cannot_delete_system_preset(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session['active_business_id'] = self.biz.id
+        session.save()
+
+        resp = self.client.post(f'/messaging/templates/{self.preset.id}/delete/')
+        self.assertEqual(resp.status_code, 404)
+        self.assertTrue(SMSTemplate.objects.filter(id=self.preset.id).exists())
+
+    def test_template_api_list_view(self):
+        self.client.force_login(self.user)
+        session = self.client.session
+        session['active_business_id'] = self.biz.id
+        session.save()
+
+        resp = self.client.get('/messaging/api/templates/')
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data['status'], 'success')
+        self.assertGreaterEqual(len(data['templates']), 2)

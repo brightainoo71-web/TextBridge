@@ -225,3 +225,35 @@ class WebhookDelivery(models.Model):
     def __str__(self):
         status = f"HTTP {self.response_status_code}" if self.response_status_code else "ERROR"
         return f"Delivery [{self.event_type}] to {self.endpoint.url} -> {status}"
+
+
+class SMSTemplate(models.Model):
+    class Category(models.TextChoices):
+        GENERAL = 'GENERAL', 'General Announcements'
+        ONBOARDING = 'ONBOARDING', 'Welcome & Onboarding'
+        BILLING = 'BILLING', 'Payment & Receipts'
+        REMINDERS = 'REMINDERS', 'Appointments & Reminders'
+        MARKETING = 'MARKETING', 'Promotions & Flash Offers'
+        ALERTS = 'ALERTS', 'Critical Alerts & Updates'
+
+    business = models.ForeignKey(
+        Business,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='sms_templates',
+        help_text="Tenant that owns this template (null if platform-wide system preset)"
+    )
+    title = models.CharField(max_length=120)
+    category = models.CharField(max_length=30, choices=Category.choices, default=Category.GENERAL)
+    content = models.TextField(help_text="Template content with placeholders e.g. {{name}}, {{first_name}}, {{phone}}")
+    is_system_preset = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-is_system_preset', 'title']
+
+    def __str__(self):
+        owner = self.business.name if self.business else "Platform Preset"
+        return f"{self.title} [{self.get_category_display()}] ({owner})"

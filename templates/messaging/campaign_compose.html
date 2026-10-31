@@ -66,11 +66,14 @@
                 <div class="mb-3">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <label class="form-label mb-0">SMS Message Content *</label>
-                        <div class="d-flex align-items-center gap-1">
-                            <span class="small text-muted me-1">Insert tag:</span>
-                            <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 tag-btn" data-tag="{% verbatim %}{{name}}{% endverbatim %}">{% verbatim %}{{name}}{% endverbatim %}</button>
-                            <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 tag-btn" data-tag="{% verbatim %}{{first_name}}{% endverbatim %}">{% verbatim %}{{first_name}}{% endverbatim %}</button>
-                            <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 tag-btn" data-tag="{% verbatim %}{{phone}}{% endverbatim %}">{% verbatim %}{{phone}}{% endverbatim %}</button>
+                        <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                            <button type="button" class="btn btn-xs btn-outline-primary py-0.5 px-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#templatePickerModal">
+                                <i class="bi bi-journal-text me-1"></i> Templates Library
+                            </button>
+                            <span class="small text-muted me-1" style="font-size: 0.725rem;">Tags:</span>
+                            <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-1.5 tag-btn" data-tag="{% verbatim %}{{name}}{% endverbatim %}">{% verbatim %}{{name}}{% endverbatim %}</button>
+                            <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-1.5 tag-btn" data-tag="{% verbatim %}{{first_name}}{% endverbatim %}">{% verbatim %}{{first_name}}{% endverbatim %}</button>
+                            <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-1.5 tag-btn" data-tag="{% verbatim %}{{phone}}{% endverbatim %}">{% verbatim %}{{phone}}{% endverbatim %}</button>
                         </div>
                     </div>
 
@@ -198,6 +201,23 @@
         const sendBtnText = document.getElementById('sendBtnText');
         const campaignForm = document.getElementById('campaignForm');
         const tagButtons = document.querySelectorAll('.tag-btn');
+
+        // Template picker insertion
+        document.querySelectorAll('.select-tpl-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const tplContent = this.getAttribute('data-content');
+                const tplTitle = this.getAttribute('data-title');
+                if (textarea) {
+                    textarea.value = tplContent;
+                    textarea.focus();
+                }
+                const titleInput = document.getElementById('campaignTitle');
+                if (titleInput && !titleInput.value.trim()) {
+                    titleInput.value = tplTitle;
+                }
+                updateMetrics();
+            });
+        });
 
         // Set min datetime on scheduled_at to current local time + 2 minutes
         if (scheduledAtInput) {

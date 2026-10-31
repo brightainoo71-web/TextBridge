@@ -10,8 +10,8 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from accounts.decorators import tenant_required
 from billing.ledger_service import CreditLedgerService, InsufficientCreditsError
-from .models import SMSCampaign, CampaignRecipient, SenderID, SMSMessage
-from .forms import CampaignComposeForm, SenderIDForm, SingleMessageForm
+from .models import SMSCampaign, CampaignRecipient, SenderID, SMSMessage, SMSTemplate
+from .forms import CampaignComposeForm, SenderIDForm, SingleMessageForm, SMSTemplateForm
 from .campaign_service import CampaignService, CampaignExecutionError
 from .segmentation import calculate_sms_segments
 from .providers import get_sms_provider
@@ -37,10 +37,24 @@ class CampaignCreateView(View):
     @tenant_required
     def get(self, request):
         business = request.business
-        form = CampaignComposeForm(business=business)
+        from django.db.models import Q
+        initial = {}
+        template_id = request.GET.get('template_id')
+        if template_id:
+            tpl = SMSTemplate.objects.filter(
+                Q(business=business) | Q(is_system_preset=True),
+                id=template_id
+            ).first()
+            if tpl:
+                initial['message_template'] = tpl.content
+                initial['title'] = tpl.title
+
+        form = CampaignComposeForm(initial=initial, business=business)
+        templates_qs = list(SMSTemplate.objects.filter(business=business)) + list(SMSTemplate.objects.filter(is_system_preset=True))
         return render(request, 'messaging/campaign_compose.html', {
             'form': form,
-            'balance': business.credit_balance
+            'balance': business.credit_balance,
+            'available_templates': templates_qs
         })
 
     @tenant_required
@@ -186,9 +200,11 @@ class SingleTestMessageView(View):
     def get(self, request):
         business = request.business
         form = SingleMessageForm(business=business)
+        templates_qs = list(SMSTemplate.objects.filter(business=business)) + list(SMSTemplate.objects.filter(is_system_preset=True))
         return render(request, 'messaging/single_message.html', {
             'form': form,
-            'balance': business.credit_balance
+            'balance': business.credit_balance,
+            'available_templates': templates_qs
         })
 
     @tenant_required
@@ -387,3 +403,85 @@ class MNotifyDlrWebhookView(View):
             "message": f"DLR processed successfully. {updated_count} record(s) updated.",
             "updated_records": updated_count
         })
+
+
+class SMSTemplateListView(View):
+    @tenant_required
+    def get(self, request):
+        business = request.business
+        selected_category = request.GET.get('category', '').strip()
+
+        qs_custom = SMSTemplate.objects.filter(business=business)
+        qs_presets = SMSTemplate.objects.filter(is_system_preset=True)
+
+        if selected_category:
+            qs_custom = qs_custom.filter(category=selected_category)
+            qs_presets = qs_presets.filter(category=selected_category)
+
+        return render(request, 'messaging/template_list.html', {
+            'custom_templates': qs_custom,
+            'preset_templates': qs_presets,
+            'categories': SMSTemplate.Category.choices,
+            'selected_category': selected_category,
+            'form': SMSTemplateForm(),
+        })
+
+
+class SMSTemplateCreateView(View):
+    @tenant_required
+    def post(self, request):
+        business = request.business
+        form = SMSTemplateForm(request.POST)
+        if form.is_valid():
+            template = form.save(commit=False)
+            template.business = business
+            template.is_system_preset = False
+            template.save()
+
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('format') == 'json':
+                return JsonResponse({
+                    'status': 'success',
+                    'id': template.id,
+                    'title': template.title,
+                    'category': template.category,
+                    'content': template.content
+                })
+
+            messages.success(request, f"Template '{template.title}' saved successfully.")
+        else:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.GET.get('format') == 'json':
+                return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
+            messages.error(request, "Please correct errors in template form.")
+
+        return redirect('messaging:template_list')
+
+
+class SMSTemplateDeleteView(View):
+    @tenant_required
+    def post(self, request, pk):
+        business = request.business
+        template = get_object_or_404(SMSTemplate, pk=pk, business=business, is_system_preset=False)
+        title = template.title
+        template.delete()
+        messages.success(request, f"Template '{title}' deleted.")
+        return redirect('messaging:template_list')
+
+
+class SMSTemplateApiListView(View):
+    @tenant_required
+    def get(self, request):
+        business = request.business
+        custom = SMSTemplate.objects.filter(business=business)
+        presets = SMSTemplate.objects.filter(is_system_preset=True)
+
+        data = []
+        for t in list(custom) + list(presets):
+            data.append({
+                'id': t.id,
+                'title': t.title,
+                'category': t.category,
+                'category_label': t.get_category_display(),
+                'content': t.content,
+                'is_preset': t.is_system_preset
+            })
+        return JsonResponse({'status': 'success', 'templates': data})

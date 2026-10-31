@@ -2,7 +2,7 @@ from django import forms
 from django.utils import timezone
 from contacts.models import ContactGroup
 from contacts.utils import normalize_phone_number
-from .models import SMSCampaign, SenderID, SMSMessage
+from .models import SMSCampaign, SenderID, SMSMessage, SMSTemplate
 
 
 class SenderIDForm(forms.ModelForm):
@@ -115,3 +115,18 @@ class SingleMessageForm(forms.Form):
         if not is_valid:
             raise forms.ValidationError(err)
         return norm
+
+
+class SMSTemplateForm(forms.ModelForm):
+    class Meta:
+        model = SMSTemplate
+        fields = ['title', 'category', 'content']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Payment Confirmation / Class Reminder'}),
+            'category': forms.Select(attrs={'class': 'form-select'}),
+            'content': forms.Textarea(attrs={
+                'class': 'form-control font-mono',
+                'rows': 4,
+                'placeholder': 'Type your message template here... Use {{name}}, {{first_name}}, {{phone}} as placeholders.'
+            }),
+        }
