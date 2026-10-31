@@ -13,6 +13,8 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dev-key-brightsms-fallback
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', '*').split(',') if h.strip()]
+if '.pythonanywhere.com' not in ALLOWED_HOSTS and '*' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('.pythonanywhere.com')
 
 # Platform Customization & Branding
 PLATFORM_NAME = os.getenv('PLATFORM_NAME', 'TextBridge')
@@ -219,6 +221,7 @@ CSRF_TRUSTED_ORIGINS = [
     for orig in os.getenv('CSRF_TRUSTED_ORIGINS', 'http://127.0.0.1:8000,http://localhost:8000').split(',')
     if orig.strip()
 ]
+CSRF_TRUSTED_ORIGINS.extend(['https://*.pythonanywhere.com', 'http://*.pythonanywhere.com'])
 
 # Production Security Hardening
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
