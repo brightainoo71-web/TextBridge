@@ -49,7 +49,7 @@ class CampaignCreateView(View):
         if form.is_valid():
             campaign = form.save(commit=False)
             campaign.business = business
-            campaign.status = SMSCampaign.Status.QUEUED if campaign.is_scheduled else SMSCampaign.Status.DRAFT
+            campaign.status = SMSCampaign.Status.SCHEDULED if campaign.is_scheduled else SMSCampaign.Status.DRAFT
             campaign.save()
 
             # Pre-calculate recipients and required credits
@@ -87,9 +87,10 @@ class CampaignCreateView(View):
                     messages.error(request, f"Dispatch error: {str(e)}")
                     return redirect('messaging:campaign_detail', pk=campaign.id)
             else:
+                sched_str = campaign.scheduled_at.strftime("%b %d, %Y at %H:%M") if campaign.scheduled_at else ""
                 messages.success(
                     request,
-                    f"Campaign '{campaign.title}' scheduled for {campaign.scheduled_at}. "
+                    f"Campaign '{campaign.title}' scheduled for automated broadcast on {sched_str}. "
                     f"Targeting {prep_info['valid_recipients']} recipient(s) ({prep_info['estimated_credits']} credits estimated)."
                 )
                 return redirect('messaging:campaign_detail', pk=campaign.id)
@@ -128,12 +129,12 @@ class CampaignCancelView(View):
     def post(self, request, pk):
         business = request.business
         campaign = get_object_or_404(SMSCampaign, pk=pk, business=business)
-        if campaign.status in [SMSCampaign.Status.DRAFT, SMSCampaign.Status.QUEUED]:
+        if campaign.status in [SMSCampaign.Status.DRAFT, SMSCampaign.Status.QUEUED, SMSCampaign.Status.SCHEDULED]:
             campaign.status = SMSCampaign.Status.CANCELLED
             campaign.save(update_fields=['status'])
-            messages.success(request, f"Campaign '{campaign.title}' has been cancelled.")
+            messages.success(request, f"Campaign '{campaign.title}' has been successfully cancelled.")
         else:
-            messages.error(request, "Only draft or queued campaigns can be cancelled.")
+            messages.error(request, "Only scheduled, queued, or draft campaigns can be cancelled.")
         return redirect('messaging:campaign_detail', pk=campaign.id)
 
 

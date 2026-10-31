@@ -51,19 +51,9 @@ if HAVE_CELERY:
         """
         Periodic Celery Beat task that triggers campaigns scheduled for the current timestamp.
         """
-        now = timezone.now()
-        due_campaigns = SMSCampaign.objects.filter(
-            status=SMSCampaign.Status.QUEUED,
-            is_scheduled=True,
-            scheduled_at__lte=now
-        )
-        dispatched_count = 0
-        for campaign in due_campaigns:
-            dispatch_campaign_async.delay(campaign.id)
-            dispatched_count += 1
-            logger.info(f"[Celery Beat] Triggered scheduled Campaign #{campaign.id} ('{campaign.title}')")
-            
-        return f"Triggered {dispatched_count} scheduled campaign(s) at {now}"
+        summary = CampaignService.process_due_scheduled_campaigns()
+        logger.info(f"[Celery Beat] Scheduled campaign runner executed: {summary}")
+        return summary
 
 else:
     def dispatch_campaign_async(campaign_id, actor_id=None):
@@ -72,4 +62,4 @@ else:
         return CampaignService.dispatch_campaign(campaign, actor=actor)
 
     def process_scheduled_campaigns_task():
-        pass
+        return CampaignService.process_due_scheduled_campaigns()

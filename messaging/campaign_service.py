@@ -204,3 +204,41 @@ class CampaignService:
             'actual_credits_used': actual_credits_used,
             'credits_refunded': unused_credits
         }
+
+    @classmethod
+    def process_due_scheduled_campaigns(cls) -> dict:
+        """
+        Finds all campaigns in SCHEDULED status whose scheduled_at time has arrived,
+        validates credit availability, and dispatches them.
+        """
+        now = timezone.now()
+        due_campaigns = SMSCampaign.objects.filter(
+            status=SMSCampaign.Status.SCHEDULED,
+            is_scheduled=True,
+            scheduled_at__lte=now
+        ).select_related('business').order_by('scheduled_at')
+
+        summary = {
+            'due_count': due_campaigns.count(),
+            'dispatched_count': 0,
+            'failed_count': 0,
+            'errors': []
+        }
+
+        for campaign in due_campaigns:
+            try:
+                cls.dispatch_campaign(campaign)
+                summary['dispatched_count'] += 1
+            except InsufficientCreditsError as e:
+                campaign.status = SMSCampaign.Status.FAILED
+                campaign.save(update_fields=['status'])
+                summary['failed_count'] += 1
+                summary['errors'].append(f"Campaign #{campaign.id} ('{campaign.title}'): Insufficient credits ({str(e)})")
+            except Exception as e:
+                campaign.status = SMSCampaign.Status.FAILED
+                campaign.save(update_fields=['status'])
+                summary['failed_count'] += 1
+                summary['errors'].append(f"Campaign #{campaign.id} ('{campaign.title}'): {str(e)}")
+
+        return summary
+

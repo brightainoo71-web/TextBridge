@@ -57,6 +57,8 @@
                     <td>
                         {% if c.status == 'COMPLETED' %}
                         <span class="badge bg-success font-mono"><i class="bi bi-check-circle-fill me-1"></i>Delivered</span>
+                        {% elif c.status == 'SCHEDULED' %}
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-mono"><i class="bi bi-calendar-event me-1"></i>Scheduled</span>
                         {% elif c.status == 'PARTIAL_FAILURE' %}
                         <span class="badge bg-warning text-dark font-mono"><i class="bi bi-exclamation-circle me-1"></i>Partial</span>
                         {% elif c.status == 'PROCESSING' %}
@@ -71,7 +73,14 @@
                         <span class="badge bg-light text-dark border font-mono">{{ c.status }}</span>
                         {% endif %}
                     </td>
-                    <td class="text-secondary small font-mono">{{ c.created_at|date:"M d, Y H:i" }}</td>
+                    <td class="text-secondary small font-mono">
+                        {% if c.is_scheduled and c.scheduled_at %}
+                        <span class="text-primary fw-semibold"><i class="bi bi-clock me-1"></i>{{ c.scheduled_at|date:"M d, H:i" }}</span>
+                        <div class="text-muted" style="font-size: 0.7rem;">Set: {{ c.created_at|date:"M d, H:i" }}</div>
+                        {% else %}
+                        {{ c.created_at|date:"M d, Y H:i" }}
+                        {% endif %}
+                    </td>
                     <td class="text-end pe-4">
                         <a href="{% url 'messaging:campaign_detail' c.id %}" class="btn btn-sm btn-outline-primary py-1 px-2.5">
                             Analytics <i class="bi bi-chevron-right ms-1"></i>

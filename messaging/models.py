@@ -54,6 +54,7 @@ class SenderID(models.Model):
 class SMSCampaign(models.Model):
     class Status(models.TextChoices):
         DRAFT = 'DRAFT', 'Draft'
+        SCHEDULED = 'SCHEDULED', 'Scheduled'
         QUEUED = 'QUEUED', 'Queued'
         PROCESSING = 'PROCESSING', 'Processing'
         COMPLETED = 'COMPLETED', 'Completed'

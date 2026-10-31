@@ -1,10 +1,13 @@
 import json
+from datetime import timedelta
 from decimal import Decimal
+from django.utils import timezone
 from django.test import TestCase, override_settings
-from accounts.models import User, Business, APIKey
+from accounts.models import User, Business, APIKey, BusinessMembership
 from contacts.models import Contact, ContactGroup, ContactGroupMembership, SuppressionRecord
 from billing.ledger_service import CreditLedgerService
 from messaging.models import SMSCampaign, CampaignRecipient, SenderID, SMSMessage
+from messaging.forms import CampaignComposeForm
 from messaging.segmentation import calculate_sms_segments
 from messaging.providers import MockSMSProvider
 from messaging.campaign_service import CampaignService
@@ -259,4 +262,131 @@ class DeveloperApiTests(TestCase):
 
         resp = self.client.get('/api/v1/balance', HTTP_AUTHORIZATION=f'Bearer {self.raw_key}')
         self.assertEqual(resp.status_code, 401)
+
+
+@override_settings(ACTIVE_SMS_PROVIDER='MOCK')
+class ScheduledCampaignTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(email='scheduler@test.com', password='Password123!')
+        self.biz = Business.objects.create(name='Schedule Biz', contact_email='scheduler@test.com', credit_balance=50)
+        BusinessMembership.objects.create(user=self.user, business=self.biz, role=BusinessMembership.Role.OWNER)
+
+        self.sid = SenderID.objects.create(
+            sender_id='SCHEDULEBIZ',
+            status=SenderID.Status.APPROVED,
+            business=self.biz
+        )
+        self.contact1 = Contact.objects.create(business=self.biz, name='Adwoa Doe', phone_number='233241234567')
+
+    def test_scheduling_in_past_is_invalid(self):
+        form_data = {
+            'title': 'Past Broadcast',
+            'sender_id': 'SCHEDULEBIZ',
+            'message_template': 'Hello {{name}}',
+            'is_scheduled': True,
+            'scheduled_at': (timezone.now() - timedelta(hours=1)).strftime('%Y-%m-%dT%H:%M')
+        }
+        form = CampaignComposeForm(data=form_data, business=self.biz)
+        self.assertFalse(form.is_valid())
+        self.assertIn('scheduled_at', form.errors)
+
+    def test_scheduling_in_future_creates_scheduled_campaign(self):
+        future_time = timezone.now() + timedelta(days=2)
+        form_data = {
+            'title': 'Future Promo',
+            'sender_id': 'SCHEDULEBIZ',
+            'message_template': 'Promo for {{name}}!',
+            'is_scheduled': True,
+            'scheduled_at': future_time.strftime('%Y-%m-%dT%H:%M')
+        }
+        form = CampaignComposeForm(data=form_data, business=self.biz)
+        self.assertTrue(form.is_valid(), form.errors)
+
+        self.client.force_login(self.user)
+        session = self.client.session
+        session['active_business_id'] = self.biz.id
+        session.save()
+
+        resp = self.client.post('/messaging/campaigns/new/', data=form_data)
+        self.assertEqual(resp.status_code, 302)
+
+        campaign = SMSCampaign.objects.get(title='Future Promo')
+        self.assertEqual(campaign.status, SMSCampaign.Status.SCHEDULED)
+        self.assertTrue(campaign.is_scheduled)
+        self.assertIsNotNone(campaign.scheduled_at)
+
+    def test_cancel_scheduled_campaign(self):
+        future_time = timezone.now() + timedelta(days=1)
+        campaign = SMSCampaign.objects.create(
+            business=self.biz,
+            title='To Cancel',
+            sender_id='SCHEDULEBIZ',
+            message_template='Test',
+            is_scheduled=True,
+            scheduled_at=future_time,
+            status=SMSCampaign.Status.SCHEDULED
+        )
+        self.client.force_login(self.user)
+        session = self.client.session
+        session['active_business_id'] = self.biz.id
+        session.save()
+
+        resp = self.client.post(f'/messaging/campaigns/{campaign.id}/cancel/')
+        self.assertEqual(resp.status_code, 302)
+        campaign.refresh_from_db()
+        self.assertEqual(campaign.status, SMSCampaign.Status.CANCELLED)
+
+    def test_process_due_scheduled_campaigns(self):
+        due_campaign = SMSCampaign.objects.create(
+            business=self.biz,
+            title='Due Campaign',
+            sender_id='SCHEDULEBIZ',
+            message_template='Hello {{name}}',
+            is_scheduled=True,
+            scheduled_at=timezone.now() - timedelta(minutes=5),
+            status=SMSCampaign.Status.SCHEDULED
+        )
+
+        future_campaign = SMSCampaign.objects.create(
+            business=self.biz,
+            title='Future Campaign',
+            sender_id='SCHEDULEBIZ',
+            message_template='Hello {{name}}',
+            is_scheduled=True,
+            scheduled_at=timezone.now() + timedelta(hours=2),
+            status=SMSCampaign.Status.SCHEDULED
+        )
+
+        summary = CampaignService.process_due_scheduled_campaigns()
+        self.assertEqual(summary['due_count'], 1)
+        self.assertEqual(summary['dispatched_count'], 1)
+
+        due_campaign.refresh_from_db()
+        self.assertEqual(due_campaign.status, SMSCampaign.Status.COMPLETED)
+        self.assertEqual(due_campaign.actual_credits_used, 1)
+
+        future_campaign.refresh_from_db()
+        self.assertEqual(future_campaign.status, SMSCampaign.Status.SCHEDULED)
+
+    def test_process_due_campaign_fails_on_insufficient_credits(self):
+        self.biz.credit_balance = 0
+        self.biz.save()
+
+        due_campaign = SMSCampaign.objects.create(
+            business=self.biz,
+            title='No Credits Due Campaign',
+            sender_id='SCHEDULEBIZ',
+            message_template='Hello {{name}}',
+            is_scheduled=True,
+            scheduled_at=timezone.now() - timedelta(minutes=2),
+            status=SMSCampaign.Status.SCHEDULED
+        )
+
+        summary = CampaignService.process_due_scheduled_campaigns()
+        self.assertEqual(summary['due_count'], 1)
+        self.assertEqual(summary['failed_count'], 1)
+
+        due_campaign.refresh_from_db()
+        self.assertEqual(due_campaign.status, SMSCampaign.Status.FAILED)
+
 

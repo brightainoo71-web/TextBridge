@@ -1,4 +1,5 @@
 from django import forms
+from django.utils import timezone
 from contacts.models import ContactGroup
 from contacts.utils import normalize_phone_number
 from .models import SMSCampaign, SenderID, SMSMessage
@@ -28,6 +29,12 @@ class CampaignComposeForm(forms.ModelForm):
         empty_label="All Contacts (Entire Business Contact List)",
         label="Target Recipients"
     )
+    scheduled_at = forms.DateTimeField(
+        required=False,
+        input_formats=['%Y-%m-%dT%H:%M', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M'],
+        widget=forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control form-control-sm'}),
+        label="Scheduled Time"
+    )
 
     class Meta:
         model = SMSCampaign
@@ -38,8 +45,22 @@ class CampaignComposeForm(forms.ModelForm):
                 'placeholder': 'Type your message here... Use {{name}} to personalize with contact full name.',
                 'id': 'message_template'
             }),
-            'scheduled_at': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        is_scheduled = cleaned_data.get('is_scheduled')
+        scheduled_at = cleaned_data.get('scheduled_at')
+
+        if is_scheduled:
+            if not scheduled_at:
+                self.add_error('scheduled_at', "Please specify a future date and time for the scheduled broadcast.")
+            elif scheduled_at <= timezone.now():
+                self.add_error('scheduled_at', "Scheduled broadcast time must be set in the future.")
+        else:
+            cleaned_data['scheduled_at'] = None
+
+        return cleaned_data
 
     def __init__(self, *args, **kwargs):
         business = kwargs.pop('business', None)

@@ -9,12 +9,16 @@
             <h4 class="fw-bold mb-0 text-dark tracking-tight">{{ campaign.title }}</h4>
             {% if campaign.status == 'COMPLETED' %}
             <span class="badge bg-success font-mono"><i class="bi bi-check-circle-fill me-1"></i>Delivered</span>
+            {% elif campaign.status == 'SCHEDULED' %}
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-mono"><i class="bi bi-calendar-event me-1"></i>Scheduled</span>
             {% elif campaign.status == 'PARTIAL_FAILURE' %}
             <span class="badge bg-warning text-dark font-mono"><i class="bi bi-exclamation-triangle-fill me-1"></i>Partial Failure</span>
             {% elif campaign.status == 'PROCESSING' %}
             <span class="badge bg-primary font-mono"><i class="bi bi-arrow-repeat me-1"></i>Sending</span>
             {% elif campaign.status == 'QUEUED' %}
             <span class="badge bg-info text-dark font-mono"><i class="bi bi-clock me-1"></i>Queued</span>
+            {% elif campaign.status == 'FAILED' %}
+            <span class="badge bg-danger font-mono"><i class="bi bi-x-circle me-1"></i>Failed</span>
             {% elif campaign.status == 'CANCELLED' %}
             <span class="badge bg-secondary font-mono">Cancelled</span>
             {% else %}
@@ -24,16 +28,19 @@
         <p class="text-secondary small mb-0">
             Sender ID: <strong class="font-mono text-dark">{{ campaign.sender_id }}</strong> &bull;
             Audience: <strong>{{ campaign.target_group.name|default:"All Workspace Audience" }}</strong> &bull;
-            Dispatched: {{ campaign.created_at|date:"M d, Y H:i" }}
+            {% if campaign.is_scheduled and campaign.scheduled_at %}
+            Scheduled for: <strong class="text-primary">{{ campaign.scheduled_at|date:"M d, Y H:i" }}</strong> &bull;
+            {% endif %}
+            Created: {{ campaign.created_at|date:"M d, Y H:i" }}
         </p>
     </div>
 
     <div class="d-flex gap-2">
-        {% if campaign.status == 'QUEUED' or campaign.status == 'DRAFT' %}
-        <form method="post" action="{% url 'messaging:campaign_cancel' campaign.id %}" onsubmit="return confirm('Cancel this queued campaign?');">
+        {% if campaign.status == 'QUEUED' or campaign.status == 'DRAFT' or campaign.status == 'SCHEDULED' %}
+        <form method="post" action="{% url 'messaging:campaign_cancel' campaign.id %}" onsubmit="return confirm('Cancel this scheduled campaign? It will not be dispatched.');">
             {% csrf_token %}
             <button type="submit" class="btn btn-outline-danger btn-sm">
-                <i class="bi bi-x-circle me-1"></i> Cancel Campaign
+                <i class="bi bi-x-circle me-1"></i> Cancel Broadcast
             </button>
         </form>
         {% endif %}
@@ -42,6 +49,19 @@
         </a>
     </div>
 </div>
+
+{% if campaign.status == 'SCHEDULED' %}
+<div class="alert alert-primary border-primary-subtle bg-primary-subtle text-primary-emphasis d-flex align-items-center gap-3 p-3 rounded-3 mb-4 shadow-sm">
+    <i class="bi bi-clock-history fs-3"></i>
+    <div class="flex-grow-1">
+        <h6 class="fw-bold mb-0">Scheduled for Automated Telecom Dispatch</h6>
+        <div class="small">
+            This broadcast will automatically fire on <strong>{{ campaign.scheduled_at|date:"F d, Y \a\t H:i" }}</strong> (Ghana Time).
+            Estimated requirement: <strong>{{ campaign.estimated_credits }} credits</strong>. Please ensure your balance remains sufficient.
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <!-- Key Performance Metrics Grid -->
 <div class="row g-3 mb-4">
