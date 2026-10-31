@@ -1,3 +1,4 @@
+import secrets
 from django.db import models
 from accounts.models import Business
 from contacts.models import Contact, ContactGroup
@@ -165,3 +166,62 @@ class ProviderAccountConfiguration(models.Model):
     def __str__(self):
         active_tag = "ACTIVE" if self.is_active else "INACTIVE"
         return f"{self.name} ({self.provider_type}) - [{active_tag}]"
+
+
+class WebhookEndpoint(models.Model):
+    class EventType(models.TextChoices):
+        SMS_SENT = 'sms.sent', 'SMS Dispatched'
+        SMS_DELIVERED = 'sms.delivered', 'SMS Delivered'
+        SMS_FAILED = 'sms.failed', 'SMS Delivery Failed'
+        CAMPAIGN_COMPLETED = 'campaign.completed', 'Broadcast Campaign Completed'
+
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='webhook_endpoints')
+    url = models.URLField(max_length=500, help_text="HTTPS endpoint to receive TextBridge events")
+    secret_key = models.CharField(max_length=64, help_text="HMAC secret used to compute X-TextBridge-Signature")
+    is_active = models.BooleanField(default=True)
+    events = models.JSONField(
+        default=list,
+        help_text="Subscribed event strings (e.g. ['sms.delivered', 'sms.failed'])"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    @classmethod
+    def create_endpoint(cls, business, url, events=None):
+        raw_secret = f"whsec_{secrets.token_hex(24)}"
+        if events is None:
+            events = ['sms.delivered', 'sms.failed']
+        return cls.objects.create(
+            business=business,
+            url=url,
+            secret_key=raw_secret,
+            is_active=True,
+            events=events
+        )
+
+    def __str__(self):
+        status = "Active" if self.is_active else "Disabled"
+        return f"Webhook [{self.business.name}]: {self.url} ({status})"
+
+
+class WebhookDelivery(models.Model):
+    endpoint = models.ForeignKey(WebhookEndpoint, on_delete=models.CASCADE, related_name='deliveries')
+    event_type = models.CharField(max_length=50)
+    event_id = models.CharField(max_length=64, db_index=True)
+    payload = models.JSONField()
+    response_status_code = models.PositiveIntegerField(null=True, blank=True)
+    response_body = models.TextField(blank=True)
+    duration_ms = models.PositiveIntegerField(default=0)
+    is_success = models.BooleanField(default=False)
+    error_message = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        status = f"HTTP {self.response_status_code}" if self.response_status_code else "ERROR"
+        return f"Delivery [{self.event_type}] to {self.endpoint.url} -> {status}"

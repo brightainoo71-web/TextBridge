@@ -16,6 +16,7 @@ from .campaign_service import CampaignService, CampaignExecutionError
 from .segmentation import calculate_sms_segments
 from .providers import get_sms_provider
 from .tasks import dispatch_campaign_async
+from .webhook_service import WebhookService
 
 logger = logging.getLogger(__name__)
 
@@ -349,6 +350,10 @@ class MNotifyDlrWebhookView(View):
                         campaign.status = SMSCampaign.Status.PARTIAL_FAILURE
                     campaign.completed_at = timezone.now()
                     campaign.save(update_fields=['status', 'completed_at'])
+                    try:
+                        WebhookService.trigger_campaign_completed(campaign)
+                    except Exception as e:
+                        logger.warning(f"Error triggering outbound webhook for campaign #{campaign.id}: {e}")
 
             # 2. Update Direct Single Messages
             direct_msgs = SMSMessage.objects.filter(provider_message_id=str(message_id))
@@ -359,6 +364,10 @@ class MNotifyDlrWebhookView(View):
                     msg.status = SMSMessage.Status.FAILED
                 msg.save(update_fields=['status'])
                 updated_count += 1
+                try:
+                    WebhookService.trigger_sms_status(msg)
+                except Exception as e:
+                    logger.warning(f"Error triggering outbound webhook for SMS #{msg.id}: {e}")
 
         elif recipient_phone and target_status:
             # Fallback by recipient phone if message_id was omitted

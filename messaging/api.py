@@ -140,6 +140,12 @@ class SendSMSApiView(View):
 
         business.refresh_from_db()
 
+        try:
+            from .webhook_service import WebhookService
+            WebhookService.trigger_sms_status(msg_record, event_type='sms.sent')
+        except Exception:
+            pass
+
         return JsonResponse({
             "status": "success",
             "message_id": msg_record.provider_message_id or f"TB_{msg_record.id}",

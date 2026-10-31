@@ -1,17 +1,17 @@
 {% extends 'base.html' %}
 
-{% block title %}Developer API Keys | {{ PLATFORM_NAME }}{% endblock %}
+{% block title %}Developer API & Outbound Webhooks | {{ PLATFORM_NAME }}{% endblock %}
 
 {% block content %}
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
     <div>
         <div class="d-flex align-items-center gap-2">
-            <h4 class="fw-bold mb-0 text-dark tracking-tight">Developer API & Webhooks</h4>
-            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-mono">REST API v1</span>
+            <h4 class="fw-bold mb-0 text-dark tracking-tight">Developer API & Outbound Webhooks</h4>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-mono">v1 REST & Webhooks</span>
         </div>
-        <p class="text-secondary small mb-0 mt-1">Integrate programmatic telecom SMS into your apps, websites, and backend systems</p>
+        <p class="text-secondary small mb-0 mt-1">Integrate programmatic telecom SMS dispatch and real-time delivery status callbacks</p>
     </div>
-    <div>
+    <div class="d-flex gap-2">
         <button type="button" class="btn btn-primary btn-sm d-flex align-items-center gap-1.5 shadow-sm" data-bs-toggle="modal" data-bs-target="#generateKeyModal">
             <i class="bi bi-key-fill"></i> Generate Secret Key
         </button>
@@ -26,7 +26,7 @@
         <div class="flex-grow-1">
             <h5 class="fw-bold text-dark mb-1">New Secret API Key Generated!</h5>
             <p class="text-secondary small mb-3">
-                Please copy your secret key right now and store it in a secure password manager or environment file. For security reasons, <strong>we cannot show it to you again</strong>.
+                Please copy your secret key right now and store it in your server's environment configuration. For security reasons, <strong>we cannot reveal it to you again</strong>.
             </p>
             <div class="input-group" style="max-width: 600px;">
                 <input type="text" id="rawSecretKey" class="form-control font-mono bg-white fw-bold text-dark border-success" value="{{ new_key.raw_key }}" readonly>
@@ -42,119 +42,377 @@
 </div>
 {% endif %}
 
-<!-- API Keys Table Card -->
-<div class="card bg-white border shadow-sm rounded-3 mb-4 overflow-hidden">
-    <div class="card-header bg-white py-3 px-4 border-bottom d-flex justify-content-between align-items-center">
-        <h6 class="fw-bold text-dark mb-0">Active Secret Keys</h6>
-        <span class="badge bg-secondary-subtle text-secondary font-mono">{{ api_keys.count }} Key(s)</span>
+<!-- Navigation Tabs for Developer Portal -->
+<ul class="nav nav-tabs border-bottom mb-4 font-mono fw-semibold small" id="devTabs" role="tablist">
+    <li class="nav-item">
+        <button class="nav-link active text-dark" id="keys-tab" data-bs-toggle="tab" data-bs-target="#tab-keys" type="button">
+            <i class="bi bi-key me-1 text-primary"></i> API Keys & Endpoints
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link text-dark position-relative" id="webhooks-tab" data-bs-toggle="tab" data-bs-target="#tab-webhooks" type="button">
+            <i class="bi bi-broadcast me-1 text-primary"></i> Outbound Webhooks
+            {% if webhook_endpoint and webhook_endpoint.is_active %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size: 0.65rem;">Live</span>
+            {% endif %}
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link text-dark" id="docs-tab" data-bs-toggle="tab" data-bs-target="#tab-docs" type="button">
+            <i class="bi bi-code-slash me-1 text-primary"></i> SDK & Code Snippets
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="devTabsContent">
+    <!-- TAB 1: API KEYS -->
+    <div class="tab-pane fade show active" id="tab-keys" role="tabpanel">
+        <div class="card bg-white border shadow-sm rounded-3 mb-4 overflow-hidden">
+            <div class="card-header bg-white py-3 px-4 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold text-dark mb-0">Active Secret Keys</h6>
+                <span class="badge bg-secondary-subtle text-secondary font-mono">{{ api_keys.count }} Key(s)</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-secondary small text-uppercase" style="letter-spacing: 0.04em;">
+                        <tr>
+                            <th class="ps-4">Key Label</th>
+                            <th>Key Prefix</th>
+                            <th>Created</th>
+                            <th>Last Used</th>
+                            <th>Status</th>
+                            <th class="pe-4 text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for key in api_keys %}
+                        <tr>
+                            <td class="ps-4 fw-semibold text-dark">{{ key.name }}</td>
+                            <td>
+                                <span class="font-mono text-dark bg-light px-2 py-1 rounded border small">
+                                    {{ key.prefix }}••••••••••••••••••••
+                                </span>
+                            </td>
+                            <td class="text-secondary small font-mono">{{ key.created_at|date:"M d, Y" }}</td>
+                            <td class="text-secondary small font-mono">
+                                {% if key.last_used_at %}{{ key.last_used_at|date:"M d, H:i" }}{% else %}<span class="text-muted">Never</span>{% endif %}
+                            </td>
+                            <td>
+                                {% if key.is_active %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle font-mono">Active</span>
+                                {% else %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle font-mono">Revoked</span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-4 text-end">
+                                {% if key.is_active %}
+                                <form method="post" action="{% url 'accounts:revoke_api_key' key.id %}" class="d-inline" onsubmit="return confirm('Revoke key \'{{ key.name }}\'? Applications using this key will immediately fail to authenticate.');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-danger btn-sm py-1 px-2.5">
+                                        <i class="bi bi-slash-circle me-1"></i> Revoke
+                                    </button>
+                                </form>
+                                {% else %}
+                                <span class="text-muted small">Disabled</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-key display-5 text-slate-300 d-block mb-2"></i>
+                                <h6 class="fw-bold text-dark">No API Keys Generated Yet</h6>
+                                <p class="small text-secondary mb-3">Create your first secret key to begin sending SMS programmatically from your backend.</p>
+                                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#generateKeyModal">
+                                    <i class="bi bi-plus-circle me-1"></i> Generate Secret Key
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Endpoints Specs Grid -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <div class="card p-3.5 bg-white border shadow-sm rounded-3 h-100">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-primary font-mono">POST</span>
+                        <code class="font-mono text-dark fw-bold">/api/v1/sms/send</code>
+                    </div>
+                    <p class="small text-secondary mb-2">Dispatches a direct SMS to any phone in Ghana. Atomically reserves credits and dispatches to telecom gateway.</p>
+                    <div class="small font-mono text-muted">Authentication: <code>Authorization: Bearer tb_live_...</code></div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card p-3.5 bg-white border shadow-sm rounded-3 h-100">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-success font-mono">GET</span>
+                        <code class="font-mono text-dark fw-bold">/api/v1/balance</code>
+                    </div>
+                    <p class="small text-secondary mb-2">Returns real-time SMS wallet balance, currency, and business ID for the authenticated workspace.</p>
+                    <div class="small font-mono text-muted">Authentication: <code>Authorization: Bearer tb_live_...</code></div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light text-secondary small text-uppercase" style="letter-spacing: 0.04em;">
-                <tr>
-                    <th class="ps-4">Key Label</th>
-                    <th>Key Prefix</th>
-                    <th>Created</th>
-                    <th>Last Used</th>
-                    <th>Status</th>
-                    <th class="pe-4 text-end">Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for key in api_keys %}
-                <tr>
-                    <td class="ps-4 fw-semibold text-dark">{{ key.name }}</td>
-                    <td>
-                        <span class="font-mono text-dark bg-light px-2 py-1 rounded border small">
-                            {{ key.prefix }}••••••••••••••••••••
-                        </span>
-                    </td>
-                    <td class="text-secondary small font-mono">{{ key.created_at|date:"M d, Y" }}</td>
-                    <td class="text-secondary small font-mono">
-                        {% if key.last_used_at %}{{ key.last_used_at|date:"M d, H:i" }}{% else %}<span class="text-muted">Never</span>{% endif %}
-                    </td>
-                    <td>
-                        {% if key.is_active %}
-                        <span class="badge bg-success-subtle text-success border border-success-subtle font-mono">Active</span>
+
+    <!-- TAB 2: OUTBOUND WEBHOOKS -->
+    <div class="tab-pane fade" id="tab-webhooks" role="tabpanel">
+        <div class="row g-4 mb-4">
+            <!-- Left: Webhook Configuration -->
+            <div class="col-lg-7">
+                <div class="card bg-white border shadow-sm rounded-3 p-4">
+                    <div class="border-bottom pb-3 mb-3 d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="fw-bold text-dark mb-0">Webhook Endpoint Settings</h6>
+                            <span class="text-secondary small">TextBridge sends HTTP POST requests with HMAC-SHA256 signatures to this URL</span>
+                        </div>
+                        {% if webhook_endpoint and webhook_endpoint.is_active %}
+                        <span class="badge bg-success font-mono"><i class="bi bi-circle-fill me-1" style="font-size: 0.5rem;"></i>Active</span>
                         {% else %}
-                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle font-mono">Revoked</span>
+                        <span class="badge bg-secondary font-mono">Inactive</span>
                         {% endif %}
-                    </td>
-                    <td class="pe-4 text-end">
-                        {% if key.is_active %}
-                        <form method="post" action="{% url 'accounts:revoke_api_key' key.id %}" class="d-inline" onsubmit="return confirm('Revoke key \'{{ key.name }}\'? Applications using this key will immediately fail to authenticate.');">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-outline-danger btn-sm py-1 px-2.5">
-                                <i class="bi bi-slash-circle me-1"></i> Revoke
+                    </div>
+
+                    <form method="post" action="{% url 'accounts:save_webhook' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-dark">Endpoint URL *</label>
+                            <input type="url" name="url" class="form-control font-mono" placeholder="https://api.yourdomain.com/webhooks/textbridge" value="{{ webhook_endpoint.url|default:'' }}" required>
+                            <div class="form-text small">Must start with <code>https://</code> (or <code>http://localhost</code> for local development).</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-dark mb-2">Subscribed Events</label>
+                            <div class="d-flex flex-column gap-2 small text-dark">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="events" value="sms.delivered" id="ev_delivered" {% if not webhook_endpoint or 'sms.delivered' in webhook_endpoint.events %}checked{% endif %}>
+                                    <label class="form-check-label" for="ev_delivered">
+                                        <code>sms.delivered</code> &mdash; Sent when an SMS is confirmed delivered to the subscriber's phone
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="events" value="sms.failed" id="ev_failed" {% if not webhook_endpoint or 'sms.failed' in webhook_endpoint.events %}checked{% endif %}>
+                                    <label class="form-check-label" for="ev_failed">
+                                        <code>sms.failed</code> &mdash; Sent when a message fails due to an invalid number or telecom rejection
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="events" value="sms.sent" id="ev_sent" {% if 'sms.sent' in webhook_endpoint.events %}checked{% endif %}>
+                                    <label class="form-check-label" for="ev_sent">
+                                        <code>sms.sent</code> &mdash; Sent immediately when an API message is accepted for transmission
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="events" value="campaign.completed" id="ev_campaign" {% if 'campaign.completed' in webhook_endpoint.events %}checked{% endif %}>
+                                    <label class="form-check-label" for="ev_campaign">
+                                        <code>campaign.completed</code> &mdash; Sent when a scheduled or broadcast campaign finishes sending
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-check form-switch mb-4">
+                            <input class="form-check-input" type="checkbox" name="is_active" id="is_webhook_active" {% if not webhook_endpoint or webhook_endpoint.is_active %}checked{% endif %}>
+                            <label class="form-check-label fw-bold small text-dark" for="is_webhook_active">Enable Outbound Webhook Dispatch</label>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                            <button type="submit" class="btn btn-primary btn-sm px-4">
+                                <i class="bi bi-save me-1"></i> Save Configuration
                             </button>
-                        </form>
-                        {% else %}
-                        <span class="text-muted small">Disabled</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" class="text-center py-5 text-muted">
-                        <i class="bi bi-key display-5 text-slate-300 d-block mb-2"></i>
-                        <h6 class="fw-bold text-dark">No API Keys Generated Yet</h6>
-                        <p class="small text-secondary mb-3">Create your first secret key to begin sending SMS programmatically from your backend.</p>
-                        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#generateKeyModal">
-                            <i class="bi bi-plus-circle me-1"></i> Generate Secret Key
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right: Webhook Secret & Test Action -->
+            <div class="col-lg-5">
+                <!-- Secret Key Card -->
+                <div class="card bg-white border shadow-sm rounded-3 p-4 mb-4">
+                    <h6 class="fw-bold text-dark mb-2">Webhook Signing Secret</h6>
+                    <p class="text-secondary small mb-3">
+                        Use this HMAC secret to verify that webhook requests originate genuinely from TextBridge using the <code>X-TextBridge-Signature</code> header.
+                    </p>
+
+                    {% if webhook_endpoint %}
+                    <div class="input-group mb-2">
+                        <input type="text" id="webhookSecret" class="form-control font-mono form-control-sm bg-light" value="{{ webhook_endpoint.secret_key }}" readonly>
+                        <button class="btn btn-outline-secondary btn-sm" type="button" onclick="copyWebhookSecret()">
+                            <i class="bi bi-clipboard"></i>
                         </button>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+                    </div>
+                    <div id="whCopyFeedback" class="small text-success d-none fw-semibold mb-2">
+                        <i class="bi bi-check2"></i> Copied to clipboard!
+                    </div>
 
-<!-- Interactive Code Quickstart & Documentation -->
-<div class="card bg-white border shadow-sm rounded-3 p-4 mb-4">
-    <div class="border-bottom pb-3 mb-4">
-        <h5 class="fw-bold text-dark mb-1">Developer API Quickstart</h5>
-        <p class="text-secondary small mb-0">Send transactional SMS over HTTP using standard JSON payloads</p>
-    </div>
+                    <form method="post" action="{% url 'accounts:regenerate_webhook_secret' %}" onsubmit="return confirm('Regenerate webhook signing secret? You will need to update your server to avoid signature verification errors.');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-warning btn-sm py-1" style="font-size: 0.775rem;">
+                            <i class="bi bi-arrow-repeat me-1"></i> Regenerate Secret
+                        </button>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-light border small text-muted mb-0">
+                        Configure a Webhook URL on the left to generate your secret key.
+                    </div>
+                    {% endif %}
+                </div>
 
-    <!-- Endpoint Specs -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-6">
-            <div class="p-3 rounded-3 bg-light border">
-                <span class="badge bg-primary font-mono mb-2">POST</span>
-                <code class="font-mono text-dark fw-bold d-block">http://127.0.0.1:8000/api/v1/sms/send</code>
-                <span class="small text-muted mt-1 d-block">Dispatches a direct SMS to any phone in Ghana.</span>
+                <!-- Test Webhook Ping Card -->
+                <div class="card bg-white border shadow-sm rounded-3 p-4">
+                    <h6 class="fw-bold text-dark mb-1">Test Webhook Connectivity</h6>
+                    <p class="text-secondary small mb-3">
+                        Dispatches a simulated <code>endpoint.test_ping</code> payload to verify your server responds with HTTP 200 OK.
+                    </p>
+
+                    {% if webhook_endpoint %}
+                    <form method="post" action="{% url 'accounts:test_webhook' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1.5">
+                            <i class="bi bi-send"></i> Send Test Ping
+                        </button>
+                    </form>
+                    {% else %}
+                    <button class="btn btn-outline-secondary btn-sm" disabled>Save URL to Test</button>
+                    {% endif %}
+                </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="p-3 rounded-3 bg-light border">
-                <span class="badge bg-success font-mono mb-2">GET</span>
-                <code class="font-mono text-dark fw-bold d-block">http://127.0.0.1:8000/api/v1/balance</code>
-                <span class="small text-muted mt-1 d-block">Queries your real-time wallet SMS credit balance.</span>
+
+        <!-- Recent Webhook Deliveries Table -->
+        <div class="card bg-white border shadow-sm rounded-3 overflow-hidden mb-4">
+            <div class="card-header bg-white py-3 px-4 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold text-dark mb-0">Recent Webhook Deliveries</h6>
+                <span class="badge bg-secondary-subtle text-secondary font-mono small">Last 20 Events</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 font-mono" style="font-size: 0.825rem;">
+                    <thead class="table-light text-secondary text-uppercase" style="letter-spacing: 0.04em;">
+                        <tr>
+                            <th class="ps-4">Event ID</th>
+                            <th>Event Type</th>
+                            <th>HTTP Response</th>
+                            <th>Duration</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in webhook_deliveries %}
+                        <tr>
+                            <td class="ps-4 fw-bold text-dark">{{ d.event_id }}</td>
+                            <td>
+                                <span class="badge bg-light text-primary border">{{ d.event_type }}</span>
+                            </td>
+                            <td>
+                                {% if d.is_success %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                    <i class="bi bi-check-circle-fill me-1"></i>HTTP {{ d.response_status_code }} OK
+                                </span>
+                                {% elif d.response_status_code %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                    <i class="bi bi-x-circle-fill me-1"></i>HTTP {{ d.response_status_code }}
+                                </span>
+                                {% else %}
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>Connection Error
+                                </span>
+                                {% endif %}
+                                {% if d.error_message %}
+                                <div class="text-danger small mt-0.5" style="font-size: 0.7rem;">{{ d.error_message|truncatechars:45 }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="text-secondary">{{ d.duration_ms }}ms</td>
+                            <td class="text-secondary">{{ d.created_at|date:"M d, H:i:s" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-muted">
+                                <i class="bi bi-inbox fs-3 d-block mb-1 text-slate-300"></i>
+                                No webhook deliveries logged yet. Configure your URL and click "Send Test Ping" above!
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <!-- Language Tabs -->
-    <ul class="nav nav-pills mb-3 gap-2" id="codeTabs" role="tablist">
-        <li class="nav-item">
-            <button class="nav-link active font-mono small py-1.5 px-3" id="curl-tab" data-bs-toggle="pill" data-bs-target="#curl-code" type="button">cURL</button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link font-mono small py-1.5 px-3" id="python-tab" data-bs-toggle="pill" data-bs-target="#python-code" type="button">Python (requests)</button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link font-mono small py-1.5 px-3" id="js-tab" data-bs-toggle="pill" data-bs-target="#js-code" type="button">Node.js / JS</button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link font-mono small py-1.5 px-3" id="php-tab" data-bs-toggle="pill" data-bs-target="#php-code" type="button">PHP</button>
-        </li>
-    </ul>
+    <!-- TAB 3: CODE SNIPPETS & SIGNATURE VERIFICATION -->
+    <div class="tab-pane fade" id="tab-docs" role="tabpanel">
+        <div class="card bg-white border shadow-sm rounded-3 p-4 mb-4">
+            <h6 class="fw-bold text-dark mb-1">Verifying Webhook Signatures (Security Best Practice)</h6>
+            <p class="text-secondary small mb-3">
+                TextBridge signs every outgoing webhook payload using HMAC-SHA256 with your secret key in the <code>X-TextBridge-Signature</code> header. Verify it on your server to prevent spoofing.
+            </p>
 
-    <div class="tab-content" id="codeTabsContent">
-        <!-- cURL -->
-        <div class="tab-pane fade show active" id="curl-code">
-            <pre class="bg-dark text-light p-3 rounded-3 font-mono small mb-0" style="overflow-x: auto;"><code>curl -X POST http://127.0.0.1:8000/api/v1/sms/send \
+            <ul class="nav nav-pills mb-3 gap-2" id="webhookCodeTabs" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active font-mono small py-1.5 px-3" id="py-wh-tab" data-bs-toggle="pill" data-bs-target="#py-wh" type="button">Python (FastAPI / Django / Flask)</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link font-mono small py-1.5 px-3" id="node-wh-tab" data-bs-toggle="pill" data-bs-target="#node-wh" type="button">Node.js (Express)</button>
+                </li>
+            </ul>
+
+            <div class="tab-content mb-4" id="webhookCodeTabsContent">
+                <div class="tab-pane fade show active" id="py-wh">
+                    <pre class="bg-dark text-light p-3 rounded-3 font-mono small mb-0" style="overflow-x: auto;"><code>import hmac
+import hashlib
+
+WEBHOOK_SECRET = "whsec_YOUR_SECRET_KEY"
+
+def verify_textbridge_webhook(raw_request_body: bytes, signature_header: str) -> bool:
+    expected_sig = hmac.new(
+        WEBHOOK_SECRET.encode('utf-8'),
+        raw_request_body,
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected_sig, signature_header)</code></pre>
+                </div>
+                <div class="tab-pane fade" id="node-wh">
+                    <pre class="bg-dark text-light p-3 rounded-3 font-mono small mb-0" style="overflow-x: auto;"><code>const crypto = require('crypto');
+
+const WEBHOOK_SECRET = 'whsec_YOUR_SECRET_KEY';
+
+function verifyTextBridgeWebhook(rawRequestBody, signatureHeader) {
+  const expectedSig = crypto
+    .createHmac('sha256', WEBHOOK_SECRET)
+    .update(rawRequestBody)
+    .digest('hex');
+  return crypto.timingSafeEqual(Buffer.from(expectedSig), Buffer.from(signatureHeader));
+}</code></pre>
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <h6 class="fw-bold text-dark mb-1">REST API SMS Dispatch Snippets</h6>
+            <p class="text-secondary small mb-3">Copy-paste ready examples to send SMS via the REST API.</p>
+
+            <ul class="nav nav-pills mb-3 gap-2" id="codeTabs" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active font-mono small py-1.5 px-3" id="curl-tab" data-bs-toggle="pill" data-bs-target="#curl-code" type="button">cURL</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link font-mono small py-1.5 px-3" id="python-tab" data-bs-toggle="pill" data-bs-target="#python-code" type="button">Python (requests)</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link font-mono small py-1.5 px-3" id="js-tab" data-bs-toggle="pill" data-bs-target="#js-code" type="button">Node.js / JS</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link font-mono small py-1.5 px-3" id="php-tab" data-bs-toggle="pill" data-bs-target="#php-code" type="button">PHP</button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="codeTabsContent">
+                <!-- cURL -->
+                <div class="tab-pane fade show active" id="curl-code">
+                    <pre class="bg-dark text-light p-3 rounded-3 font-mono small mb-0" style="overflow-x: auto;"><code>curl -X POST http://127.0.0.1:8000/api/v1/sms/send \
   -H "Authorization: Bearer tb_live_YOUR_SECRET_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -162,11 +420,11 @@
     "message": "Your verification code is 849204",
     "sender_id": "Abtuniverse"
   }'</code></pre>
-        </div>
+                </div>
 
-        <!-- Python -->
-        <div class="tab-pane fade" id="python-code">
-            <pre class="bg-dark text-light p-3 rounded-3 font-mono small mb-0" style="overflow-x: auto;"><code>import requests
+                <!-- Python -->
+                <div class="tab-pane fade" id="python-code">
+                    <pre class="bg-dark text-light p-3 rounded-3 font-mono small mb-0" style="overflow-x: auto;"><code>import requests
 
 API_KEY = "tb_live_YOUR_SECRET_KEY"
 url = "http://127.0.0.1:8000/api/v1/sms/send"
@@ -184,11 +442,11 @@ payload = {
 
 response = requests.post(url, json=payload, headers=headers)
 print(response.json())</code></pre>
-        </div>
+                </div>
 
-        <!-- Node.js / JavaScript -->
-        <div class="tab-pane fade" id="js-code">
-            <pre class="bg-dark text-light p-3 rounded-3 font-mono small mb-0" style="overflow-x: auto;"><code>const apiKey = 'tb_live_YOUR_SECRET_KEY';
+                <!-- Node.js / JavaScript -->
+                <div class="tab-pane fade" id="js-code">
+                    <pre class="bg-dark text-light p-3 rounded-3 font-mono small mb-0" style="overflow-x: auto;"><code>const apiKey = 'tb_live_YOUR_SECRET_KEY';
 
 fetch('http://127.0.0.1:8000/api/v1/sms/send', {
   method: 'POST',
@@ -205,11 +463,11 @@ fetch('http://127.0.0.1:8000/api/v1/sms/send', {
 .then(res => res.json())
 .then(data => console.log(data))
 .catch(err => console.error(err));</code></pre>
-        </div>
+                </div>
 
-        <!-- PHP -->
-        <div class="tab-pane fade" id="php-code">
-            <pre class="bg-dark text-light p-3 rounded-3 font-mono small mb-0" style="overflow-x: auto;"><code>&lt;?php
+                <!-- PHP -->
+                <div class="tab-pane fade" id="php-code">
+                    <pre class="bg-dark text-light p-3 rounded-3 font-mono small mb-0" style="overflow-x: auto;"><code>&lt;?php
 $apiKey = "tb_live_YOUR_SECRET_KEY";
 $data = [
     "recipient" => "0244123456",
@@ -229,6 +487,8 @@ curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
 $response = curl_exec($ch);
 curl_close($ch);
 echo $response;</code></pre>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -245,7 +505,7 @@ echo $response;</code></pre>
                 {% csrf_token %}
                 <div class="modal-body py-4">
                     <p class="text-secondary small mb-3">
-                        Give your key an identifiable label (e.g. <em>Production Backend</em>, <em>Shopify Webhook</em>, <em>Staging App</em>).
+                        Give your key an identifiable label (e.g. <em>Production Backend</em>, <em>Shopify Integration</em>, <em>Mobile App</em>).
                     </p>
                     <div class="mb-3">
                         <label class="form-label small fw-semibold text-dark">Key Name / Description *</label>
@@ -269,6 +529,17 @@ function copySecretKey() {
     input.setSelectionRange(0, 99999);
     navigator.clipboard.writeText(input.value).then(function() {
         const feedback = document.getElementById('copyFeedback');
+        if (feedback) feedback.classList.remove('d-none');
+    });
+}
+
+function copyWebhookSecret() {
+    const input = document.getElementById('webhookSecret');
+    if (!input) return;
+    input.select();
+    input.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(input.value).then(function() {
+        const feedback = document.getElementById('whCopyFeedback');
         if (feedback) feedback.classList.remove('d-none');
     });
 }

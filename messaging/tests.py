@@ -6,7 +6,9 @@ from django.test import TestCase, override_settings
 from accounts.models import User, Business, APIKey, BusinessMembership
 from contacts.models import Contact, ContactGroup, ContactGroupMembership, SuppressionRecord
 from billing.ledger_service import CreditLedgerService
-from messaging.models import SMSCampaign, CampaignRecipient, SenderID, SMSMessage
+from unittest.mock import patch, MagicMock
+from messaging.models import SMSCampaign, CampaignRecipient, SenderID, SMSMessage, WebhookEndpoint, WebhookDelivery
+from messaging.webhook_service import WebhookService
 from messaging.forms import CampaignComposeForm
 from messaging.segmentation import calculate_sms_segments
 from messaging.providers import MockSMSProvider
@@ -390,3 +392,77 @@ class ScheduledCampaignTests(TestCase):
         self.assertEqual(due_campaign.status, SMSCampaign.Status.FAILED)
 
 
+
+
+@override_settings(ACTIVE_SMS_PROVIDER='MOCK')
+class OutboundWebhookTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(email='wh_tester@test.com', password='Password123!')
+        self.biz = Business.objects.create(name='Webhook Biz', contact_email='wh_tester@test.com', credit_balance=50)
+        self.endpoint = WebhookEndpoint.create_endpoint(
+            business=self.biz,
+            url="https://api.partner.com/webhook",
+            events=['sms.delivered', 'sms.failed', 'campaign.completed']
+        )
+
+    def test_create_endpoint_generates_secret(self):
+        self.assertTrue(self.endpoint.secret_key.startswith('whsec_'))
+        self.assertTrue(self.endpoint.is_active)
+        self.assertEqual(len(self.endpoint.secret_key), 54)
+
+    @patch('requests.post')
+    def test_dispatch_event_success_and_signature(self, mock_post):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.text = '{"received": true}'
+        mock_post.return_value = mock_resp
+
+        deliveries = WebhookService.dispatch_event(
+            business=self.biz,
+            event_type='sms.delivered',
+            data={'message_id': 'MSG_100', 'recipient': '233241234567', 'status': 'DELIVERED'}
+        )
+        self.assertEqual(len(deliveries), 1)
+        d = deliveries[0]
+        self.assertTrue(d.is_success)
+        self.assertEqual(d.response_status_code, 200)
+
+        # Check call arguments
+        mock_post.assert_called_once()
+        args, kwargs = mock_post.call_args
+        self.assertEqual(args[0], 'https://api.partner.com/webhook')
+        headers = kwargs['headers']
+        self.assertEqual(headers['X-TextBridge-Event'], 'sms.delivered')
+        self.assertIn('X-TextBridge-Signature', headers)
+
+        # Verify HMAC-SHA256 signature
+        import hmac, hashlib
+        expected_sig = hmac.new(
+            self.endpoint.secret_key.encode('utf-8'),
+            kwargs['data'].encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+        self.assertEqual(headers['X-TextBridge-Signature'], expected_sig)
+
+    @patch('requests.post')
+    def test_unsubscribed_event_not_dispatched(self, mock_post):
+        # Endpoint is only subscribed to sms.delivered, sms.failed, campaign.completed
+        deliveries = WebhookService.dispatch_event(
+            business=self.biz,
+            event_type='sms.sent',
+            data={'message_id': 'MSG_UNSUB'}
+        )
+        self.assertEqual(len(deliveries), 0)
+        mock_post.assert_not_called()
+
+    @patch('requests.post')
+    def test_test_ping_dispatches_correctly(self, mock_post):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.text = 'OK'
+        mock_post.return_value = mock_resp
+
+        delivery = WebhookService.send_test_ping(self.endpoint)
+        self.assertTrue(delivery.is_success)
+        self.assertEqual(delivery.event_type, 'endpoint.test_ping')
+        self.assertEqual(WebhookDelivery.objects.filter(endpoint=self.endpoint).count(), 1)

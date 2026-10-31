@@ -1,3 +1,5 @@
+from messaging.models import WebhookEndpoint, WebhookDelivery
+from messaging.webhook_service import WebhookService
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.forms import AuthenticationForm
@@ -222,4 +224,77 @@ class RevokeApiKeyView(View):
         key.is_active = False
         key.save(update_fields=['is_active'])
         messages.warning(request, f"API key '{key.name}' ({key.prefix}...) has been revoked.")
+        return redirect('accounts:developer_keys')
+
+
+class SaveWebhookEndpointView(View):
+    @tenant_required
+    def post(self, request):
+        business = request.business
+        url = request.POST.get('url', '').strip()
+        is_active = request.POST.get('is_active') == 'on'
+        selected_events = request.POST.getlist('events')
+
+        if not url:
+            messages.error(request, "Webhook URL cannot be empty.")
+            return redirect('accounts:developer_keys')
+
+        if not url.startswith('https://') and not url.startswith('http://127.0.0.1') and not url.startswith('http://localhost'):
+            messages.error(request, "Webhook URL must begin with https:// (or http://localhost for testing).")
+            return redirect('accounts:developer_keys')
+
+        endpoint = WebhookEndpoint.objects.filter(business=business).first()
+        if endpoint:
+            endpoint.url = url
+            endpoint.is_active = is_active
+            endpoint.events = selected_events if selected_events else ['sms.delivered', 'sms.failed']
+            endpoint.save()
+            messages.success(request, f"Webhook settings updated for {endpoint.url}.")
+        else:
+            endpoint = WebhookEndpoint.create_endpoint(
+                business=business,
+                url=url,
+                events=selected_events if selected_events else ['sms.delivered', 'sms.failed']
+            )
+            endpoint.is_active = is_active
+            endpoint.save()
+            messages.success(request, "Webhook endpoint created! Your secret signing key is ready.")
+
+        return redirect('accounts:developer_keys')
+
+
+class TestWebhookPingView(View):
+    @tenant_required
+    def post(self, request):
+        business = request.business
+        endpoint = WebhookEndpoint.objects.filter(business=business).first()
+        if not endpoint:
+            messages.error(request, "Please configure a webhook URL first before testing.")
+            return redirect('accounts:developer_keys')
+
+        delivery = WebhookService.send_test_ping(endpoint)
+        if delivery.is_success:
+            messages.success(
+                request,
+                f"Test webhook delivered successfully! Remote server responded with HTTP {delivery.response_status_code} "
+                f"in {delivery.duration_ms}ms."
+            )
+        else:
+            err = delivery.error_message or f"HTTP {delivery.response_status_code}"
+            messages.warning(
+                request,
+                f"Test webhook dispatched, but remote server returned: {err} ({delivery.duration_ms}ms)."
+            )
+        return redirect('accounts:developer_keys')
+
+
+class RegenerateWebhookSecretView(View):
+    @tenant_required
+    def post(self, request):
+        business = request.business
+        endpoint = WebhookEndpoint.objects.filter(business=business).first()
+        if endpoint:
+            endpoint.secret_key = f"whsec_{secrets.token_hex(24)}"
+            endpoint.save(update_fields=['secret_key'])
+            messages.success(request, "New webhook signing secret generated! Update your verification server.")
         return redirect('accounts:developer_keys')

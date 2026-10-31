@@ -12,5 +12,8 @@ urlpatterns = [
     path('profile/', views.BusinessProfileView.as_view(), name='profile'),
     path('developer-keys/', views.DeveloperApiKeysView.as_view(), name='developer_keys'),
     path('developer-keys/<int:pk>/revoke/', views.RevokeApiKeyView.as_view(), name='revoke_api_key'),
+    path('developer-webhooks/save/', views.SaveWebhookEndpointView.as_view(), name='save_webhook'),
+    path('developer-webhooks/test/', views.TestWebhookPingView.as_view(), name='test_webhook'),
+    path('developer-webhooks/regenerate-secret/', views.RegenerateWebhookSecretView.as_view(), name='regenerate_webhook_secret'),
     path('suspended/', views.SuspendedNoticeView.as_view(), name='suspended_notice'),
 ]
