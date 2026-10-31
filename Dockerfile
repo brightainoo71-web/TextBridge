@@ -1,58 +1,53 @@
-# Multi-stage production Dockerfile for TextBridge SMS Platform
-FROM python:3.12-slim as builder
+# syntax=docker/dockerfile:1
+# TextBridge Production Dockerfile
+# Multi-stage, non-root, hardened Python 3.12 image
 
-# Prevent python from writing pyc files and buffering stdout/stderr
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+FROM python:3.12-slim-bookworm AS base
 
-WORKDIR /app
-
-# Install system dependencies needed for compiling psycopg2 and C extensions
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libpq-dev \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
-
-
-# Final runtime stage
-FROM python:3.12-slim
-
+# Set environment flags
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PORT=8000
+    DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install essential system dependencies and PostgreSQL client libraries
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    curl \
+    netcat-traditional \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Runtime dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 \
-    curl \
-    netcat-openbsd \
-    && rm -rf /var/lib/apt/lists/*
+# Create a dedicated non-root application user
+RUN groupadd -g 1000 textbridge && \
+    useradd -u 1000 -g textbridge -s /bin/bash -m textbridge
 
-# Copy installed wheels and binaries from builder
-COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+# Copy dependency requirements
+COPY requirements.txt /app/
 
-# Create unprivileged system user for security
-RUN groupadd -r textbridge && useradd -r -g textbridge -d /app textbridge
+# Install Python production dependencies
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt
 
-# Copy application source code
-COPY . /app
+# Copy application codebase
+COPY . /app/
 
-# Set up entrypoint script permissions
-RUN chmod +x /app/scripts/entrypoint.sh && \
-    mkdir -p /app/staticfiles /app/media && \
+# Ensure runtime directories exist with appropriate ownership
+RUN mkdir -p /app/staticfiles /app/media /app/logs && \
     chown -R textbridge:textbridge /app
 
+# Make the startup entrypoint executable
+RUN chmod +x /app/docker-entrypoint.sh
+
+# Switch to non-root user
 USER textbridge
 
+# Expose Gunicorn application port
 EXPOSE 8000
 
-ENTRYPOINT ["/app/scripts/entrypoint.sh"]
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--threads", "2", "--timeout", "60"]
+# Default entrypoint and command
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--threads", "2", "--timeout", "60", "--access-logfile", "-", "--error-logfile", "-"]

@@ -137,6 +137,15 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage" if not DEBUG else "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
@@ -171,6 +180,10 @@ CELERY_BEAT_SCHEDULE = {
     'dispatch-scheduled-campaigns-every-minute': {
         'task': 'messaging.tasks.process_scheduled_campaigns_task',
         'schedule': 60.0,
+    },
+    'dispatch-daily-birthdays-hourly': {
+        'task': 'contacts.tasks.dispatch_daily_birthdays_task',
+        'schedule': 3600.0,
     },
 }
 
@@ -208,6 +221,10 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 # Production Security Hardening
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+
 if not DEBUG:
     SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'True').lower() in ('true', '1', 'yes')
     SESSION_COOKIE_SECURE = True
