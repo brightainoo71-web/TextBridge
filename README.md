@@ -1,4 +1,4 @@
-# BrightSMS — Multi-Business SMS SaaS Platform
+# TextBridge — Multi-Business SMS SaaS Platform
 
 [![Python](https://img.shields.io/badge/Python-3.14-blue.svg)](https://www.python.org/)
 [![Django](https://img.shields.io/badge/Django-6.1-green.svg)](https://www.djangoproject.com/)
