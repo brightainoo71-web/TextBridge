@@ -332,6 +332,13 @@ class AdminSenderIDListView(View):
 class AdminAuditLogListView(View):
     @superadmin_required
     def get(self, request):
+        if AuditLog.objects.count() == 0:
+            AuditLog.objects.create(
+                business=None,
+                actor=request.user,
+                action='SYSTEM_ONLINE',
+                description=f"TextBridge Multi-Tenant Telecom SaaS initialized and online (Superadmin: {request.user.email})"
+            )
         logs = AuditLog.objects.select_related('business', 'actor').order_by('-created_at')[:100]
         return render(request, 'analytics/admin_audit_logs.html', {'logs': logs})
 

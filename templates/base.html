@@ -297,8 +297,8 @@
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="bg-white border-top py-3 mt-auto">
+    <!-- Footer (Desktop Only, hidden on mobile so it never clashes with bottom app bar) -->
+    <footer class="bg-white border-top py-3 mt-auto d-none d-lg-block">
         <div class="container-fluid px-lg-4 d-flex flex-wrap justify-content-between align-items-center text-muted small">
             <div>
                 &copy; {% now "Y" %} <strong>{{ PLATFORM_NAME }}</strong> &bull; Multi-Tenant SMS Infrastructure &bull; Currency: {{ PRIMARY_CURRENCY }} ({{ CURRENCY_SYMBOL }})
@@ -329,9 +329,9 @@
         </a>
         <a href="{% url 'analytics:admin_audit_logs' %}" class="tb-mobile-nav-item {% if request.resolver_match.url_name == 'admin_audit_logs' %}active{% endif %}">
             <i class="bi bi-shield-check"></i>
-            <span>Audit</span>
+            <span>Audit Trail</span>
         </a>
-        <a href="javascript:void(0)" class="tb-mobile-nav-item" onclick="document.getElementById('topUserDropdown').click();">
+        <a href="{% url 'accounts:profile' %}" class="tb-mobile-nav-item {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
             <i class="bi bi-person-circle"></i>
             <span>Account</span>
         </a>

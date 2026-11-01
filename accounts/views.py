@@ -116,6 +116,14 @@ class LoginView(View):
         if form.is_valid():
             user = form.get_user()
             login(request, user)
+            membership = user.memberships.first() if hasattr(user, 'memberships') else None
+            biz = membership.business if membership else None
+            AuditLog.objects.create(
+                business=biz,
+                actor=user,
+                action='USER_LOGIN',
+                description=f"User {user.email} logged in (Role: {user.role})"
+            )
             messages.success(request, f"Welcome back, {user.first_name or user.email}!")
             return redirect('accounts:dashboard_redirect')
         return render(request, 'accounts/login.html', {'form': form})
@@ -123,13 +131,21 @@ class LoginView(View):
 
 class LogoutView(View):
     def post(self, request):
+        if request.user.is_authenticated:
+            membership = request.user.memberships.first() if hasattr(request.user, 'memberships') else None
+            biz = membership.business if membership else None
+            AuditLog.objects.create(
+                business=biz,
+                actor=request.user,
+                action='USER_LOGOUT',
+                description=f"User {request.user.email} logged out securely"
+            )
         logout(request)
         messages.info(request, "You have been securely logged out.")
         return redirect('accounts:login')
 
     def get(self, request):
-        logout(request)
-        return redirect('accounts:login')
+        return self.post(request)
 
 
 class DashboardRedirectView(View):
@@ -169,15 +185,40 @@ class OnboardingView(View):
 
 
 class BusinessProfileView(View):
-    @tenant_required
     def get(self, request):
-        business = request.business
+        if not request.user.is_authenticated:
+            return redirect('accounts:login')
+
+        # If Superadmin without tenant business, render Superadmin Profile & Command Center
+        if request.user.is_superadmin and not getattr(request, 'business', None):
+            return render(request, 'accounts/superadmin_profile.html')
+
+        business = getattr(request, 'business', None)
+        if not business:
+            messages.error(request, "Your account is not linked to an active business or your business is pending setup.")
+            return redirect('accounts:onboarding')
+
+        if business.status == 'SUSPENDED':
+            messages.error(request, "Your business account is suspended. Please contact platform support.")
+            return redirect('accounts:suspended_notice')
+
         form = BusinessProfileForm(instance=business)
         return render(request, 'accounts/profile.html', {'form': form, 'business': business})
 
-    @tenant_required
     def post(self, request):
-        business = request.business
+        if not request.user.is_authenticated:
+            return redirect('accounts:login')
+
+        if request.user.is_superadmin and not getattr(request, 'business', None):
+            return redirect('accounts:profile')
+
+        business = getattr(request, 'business', None)
+        if not business:
+            return redirect('accounts:onboarding')
+
+        if business.status == 'SUSPENDED':
+            return redirect('accounts:suspended_notice')
+
         form = BusinessProfileForm(request.POST, instance=business)
         if form.is_valid():
             form.save()

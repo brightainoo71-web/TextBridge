@@ -1,44 +1,95 @@
 {% extends 'base.html' %}
 
-{% block title %}System Audit Logs | {{ PLATFORM_NAME }}{% endblock %}
+{% block title %}Audit Trail | {{ PLATFORM_NAME }}{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
     <div>
-        <h4 class="fw-bold mb-1">System Audit Logs</h4>
-        <p class="text-secondary small mb-0">Immutable records of administrative, financial, and messaging activities</p>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-0.5 rounded-pill font-mono" style="font-size: 0.7rem;">
+                <i class="bi bi-shield-check me-1"></i> IMMUTABLE LOGS
+            </span>
+            <span class="badge bg-success-subtle text-success border border-success-subtle font-mono" style="font-size: 0.7rem;">
+                REAL-TIME AUDIT
+            </span>
+        </div>
+        <h4 class="fw-bold mb-0 text-dark tracking-tight fs-5 fs-md-4">Security & System Audit Trail</h4>
+        <p class="text-secondary small mb-0 mt-1">
+            Immutable records of logins, administrative provisioning, credit adjustments, and telecom events.
+        </p>
     </div>
-    <a href="{% url 'analytics:admin_dashboard' %}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left me-1"></i> Admin Dashboard
+    <a href="{% url 'analytics:admin_dashboard' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1.5 shadow-sm">
+        <i class="bi bi-arrow-left"></i> <span>Dashboard</span>
     </a>
 </div>
 
-<div class="card bg-white shadow-sm overflow-hidden">
+<!-- Mobile Activity Cards View (d-md-none) -->
+<div class="d-md-none">
+    {% for log in logs %}
+    <div class="card p-3 mb-2.5 bg-white border shadow-sm rounded-3">
+        <div class="d-flex justify-content-between align-items-center mb-1.5">
+            <span class="badge {% if 'LOGIN' in log.action or 'ONLINE' in log.action %}bg-success-subtle text-success border border-success-subtle{% elif 'REJECT' in log.action or 'SUSPEND' in log.action %}bg-danger-subtle text-danger border border-danger-subtle{% else %}bg-primary-subtle text-primary border border-primary-subtle{% endif %} font-mono" style="font-size: 0.7rem;">
+                {{ log.action }}
+            </span>
+            <span class="text-muted font-mono" style="font-size: 0.725rem;">
+                {{ log.created_at|date:"M d, H:i" }}
+            </span>
+        </div>
+        <div class="text-dark small fw-semibold mb-2">
+            {{ log.description }}
+        </div>
+        <div class="d-flex justify-content-between align-items-center pt-2 border-top text-muted" style="font-size: 0.75rem;">
+            <span><i class="bi bi-buildings me-1"></i>{{ log.business.name|default:"Platform Global" }}</span>
+            <span class="font-mono"><i class="bi bi-person me-1"></i>{{ log.actor.email|default:"System" }}</span>
+        </div>
+    </div>
+    {% empty %}
+    <div class="card p-5 text-center bg-white border shadow-sm rounded-3 text-muted">
+        <i class="bi bi-shield-check fs-1 text-secondary opacity-50 mb-2"></i>
+        <h6 class="fw-bold text-dark">Audit Trail Ready</h6>
+        <p class="small text-secondary mb-0">System audit tracking is active. Real-time actions will appear here automatically.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Desktop Table View (d-none d-md-block) -->
+<div class="card bg-white border shadow-sm rounded-3 overflow-hidden d-none d-md-block">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light text-secondary small text-uppercase">
                 <tr>
                     <th>Timestamp</th>
                     <th>Action</th>
-                    <th>Business</th>
+                    <th>Business Scope</th>
                     <th>Actor</th>
-                    <th>Description</th>
+                    <th>Audit Description</th>
                 </tr>
             </thead>
             <tbody>
                 {% for log in logs %}
                 <tr>
-                    <td class="text-secondary small font-monospace">{{ log.created_at|date:"Y-m-d H:i:s" }}</td>
+                    <td class="text-secondary small font-mono">{{ log.created_at|date:"Y-m-d H:i:s" }}</td>
                     <td>
-                        <span class="badge bg-light text-dark border font-monospace">{{ log.action }}</span>
+                        <span class="badge {% if 'LOGIN' in log.action or 'ONLINE' in log.action %}bg-success-subtle text-success border border-success-subtle{% elif 'REJECT' in log.action or 'SUSPEND' in log.action %}bg-danger-subtle text-danger border border-danger-subtle{% else %}bg-primary-subtle text-primary border border-primary-subtle{% endif %} font-mono">
+                            {{ log.action }}
+                        </span>
                     </td>
-                    <td class="fw-medium text-dark">{{ log.business.name|default:"Platform Global" }}</td>
-                    <td class="small text-secondary">{{ log.actor.email|default:"System" }}</td>
+                    <td class="fw-medium text-dark small">
+                        {% if log.business %}
+                        <i class="bi bi-buildings text-muted me-1"></i>{{ log.business.name }}
+                        {% else %}
+                        <span class="badge bg-secondary-subtle text-secondary border">Platform Global</span>
+                        {% endif %}
+                    </td>
+                    <td class="small text-secondary font-mono">{{ log.actor.email|default:"System Engine" }}</td>
                     <td class="small text-dark">{{ log.description }}</td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="5" class="text-center py-5 text-muted small">No audit logs recorded.</td>
+                    <td colspan="5" class="text-center py-5 text-muted small">
+                        <i class="bi bi-shield-check fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                        Security Audit Trail is active and listening for platform events.
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
