@@ -8,9 +8,14 @@
         <h4 class="fw-bold mb-1">Registered Businesses</h4>
         <p class="text-secondary small mb-0">Manage customer accounts, suspend or reactivate tenants, and adjust credit allocations</p>
     </div>
-    <a href="{% url 'analytics:admin_dashboard' %}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left me-1"></i> Admin Dashboard
-    </a>
+    <div class="d-flex gap-2">
+        <a href="{% url 'analytics:admin_sender_ids' %}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-tag me-1"></i> Sender IDs
+        </a>
+        <a href="{% url 'analytics:admin_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Admin Dashboard
+        </a>
+    </div>
 </div>
 
 <!-- Search Bar -->
@@ -85,11 +90,57 @@
                                 {% endif %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
-                                    <button class="dropdown-item text-primary" data-bs-toggle="modal" data-bs-target="#adjustModal{{ b.id }}">
+                                    <button class="dropdown-item text-primary" data-bs-toggle="modal" data-bs-target="#addSenderIdModal{{ b.id }}">
+                                        <i class="bi bi-tag me-2"></i> Assign / Request Sender ID
+                                    </button>
+                                </li>
+                                <li>
+                                    <button class="dropdown-item text-secondary" data-bs-toggle="modal" data-bs-target="#adjustModal{{ b.id }}">
                                         <i class="bi bi-coin me-2"></i> Adjust Credit Balance
                                     </button>
                                 </li>
                             </ul>
+                        </div>
+
+                        <!-- Assign / Request Sender ID Modal -->
+                        <div class="modal fade" id="addSenderIdModal{{ b.id }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered text-start">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title fw-bold">Provision Sender ID: {{ b.name }}</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <form method="post" action="{% url 'analytics:admin_business_action' b.id %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="add_sender_id">
+                                        <div class="modal-body">
+                                            <p class="small text-secondary mb-3">
+                                                Provision a custom brand Sender ID for <strong>{{ b.name }}</strong>. 
+                                                Ghana NCA telco limit: max 11 alphanumeric characters.
+                                            </p>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Sender ID (Max 11 Characters)</label>
+                                                <input type="text" name="sender_id" class="form-control form-control-sm font-monospace text-uppercase" maxlength="11" placeholder="e.g. {{ b.name|slice:':11'|upper }}" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-semibold">Telecom Purpose / Usage</label>
+                                                <textarea name="purpose" class="form-control form-control-sm" rows="2" placeholder="e.g. Customer notifications, order updates, and marketing broadcasts"></textarea>
+                                            </div>
+                                            <div class="mb-2">
+                                                <label class="form-label small fw-semibold">Approval Status</label>
+                                                <select name="status" class="form-select form-select-sm">
+                                                    <option value="APPROVED" selected>Approved & Active (Already approved on mNotify)</option>
+                                                    <option value="PENDING">Pending (Awaiting mNotify whitelisting)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer bg-light">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <button type="submit" class="btn btn-sm btn-primary">Save & Assign</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Credit Adjustment Modal -->

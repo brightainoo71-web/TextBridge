@@ -1,5 +1,7 @@
 import csv
+import uuid
 from decimal import Decimal
+from django.utils import timezone
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.views.generic import View
@@ -10,7 +12,7 @@ from accounts.decorators import tenant_required, superadmin_required
 from contacts.models import Contact
 from billing.models import Purchase, SMSPackage, CreditLedgerEntry
 from billing.ledger_service import CreditLedgerService
-from messaging.models import SMSCampaign, CampaignRecipient
+from messaging.models import SMSCampaign, CampaignRecipient, SenderID
 from messaging.providers import get_sms_provider
 
 
@@ -155,7 +157,176 @@ class AdminBusinessActionView(View):
             except Exception as e:
                 messages.error(request, f"Failed to adjust credits: {str(e)}")
 
+        elif action == 'add_sender_id':
+            raw_sid = request.POST.get('sender_id', '').strip()
+            purpose = request.POST.get('purpose', '').strip()
+            status = request.POST.get('status', SenderID.Status.APPROVED)
+            clean_sid = ''.join(ch for ch in raw_sid if ch.isalnum()).upper()[:11]
+            if clean_sid:
+                sid, created = SenderID.objects.get_or_create(
+                    business=business,
+                    sender_id=clean_sid,
+                    defaults={
+                        'purpose': purpose or f"Provisioned by Administrator for {business.name}",
+                        'status': status,
+                        'approved_at': timezone.now() if status == SenderID.Status.APPROVED else None
+                    }
+                )
+                if not created:
+                    sid.status = status
+                    if status == SenderID.Status.APPROVED:
+                        sid.approved_at = timezone.now()
+                    sid.save()
+                if status == SenderID.Status.APPROVED:
+                    business.preferred_sender_id = clean_sid
+                    business.save(update_fields=['preferred_sender_id'])
+                AuditLog.objects.create(
+                    business=business,
+                    actor=request.user,
+                    action='SENDER_ID_PROVISIONED',
+                    description=f"Admin provisioned Sender ID '{clean_sid}' ({status}) for {business.name}"
+                )
+                messages.success(request, f"Sender ID '{clean_sid}' successfully assigned to '{business.name}'.")
+            else:
+                messages.error(request, "Invalid Sender ID. Must be 1-11 alphanumeric characters.")
+
         return redirect('analytics:admin_business_list')
+
+
+class AdminSenderIDListView(View):
+    """
+    Superadmin Command Center for provisioned, pending, and platform-wide Sender IDs.
+    Allows the platform administrator to request, approve, reject, or assign Sender IDs
+    for any registered tenant account or system-wide default.
+    """
+    @superadmin_required
+    def get(self, request):
+        status_filter = request.GET.get('status', '').strip().upper()
+        search_query = request.GET.get('q', '').strip()
+
+        sender_ids = SenderID.objects.select_related('business').order_by('-created_at')
+        if status_filter:
+            sender_ids = sender_ids.filter(status=status_filter)
+        if search_query:
+            sender_ids = sender_ids.filter(
+                Q(sender_id__icontains=search_query) |
+                Q(business__name__icontains=search_query) |
+                Q(purpose__icontains=search_query)
+            )
+
+        businesses = Business.objects.filter(status=Business.Status.ACTIVE).order_by('name')
+        pending_count = SenderID.objects.filter(status=SenderID.Status.PENDING).count()
+        approved_count = SenderID.objects.filter(status=SenderID.Status.APPROVED).count()
+        system_defaults_count = SenderID.objects.filter(is_system_default=True).count()
+
+        return render(request, 'analytics/admin_sender_id_list.html', {
+            'sender_ids': sender_ids,
+            'businesses': businesses,
+            'status_filter': status_filter,
+            'search_query': search_query,
+            'pending_count': pending_count,
+            'approved_count': approved_count,
+            'system_defaults_count': system_defaults_count,
+        })
+
+    @superadmin_required
+    def post(self, request):
+        action = request.POST.get('action')
+
+        if action == 'create':
+            business_id = request.POST.get('business_id')
+            raw_sid = request.POST.get('sender_id', '').strip()
+            purpose = request.POST.get('purpose', '').strip()
+            initial_status = request.POST.get('status', SenderID.Status.APPROVED)
+            is_system_default = request.POST.get('is_system_default') == '1'
+
+            clean_sid = ''.join(ch for ch in raw_sid if ch.isalnum()).upper()[:11]
+            if not clean_sid:
+                messages.error(request, "Sender ID must contain 1-11 alphanumeric characters.")
+                return redirect('analytics:admin_sender_ids')
+
+            business = None
+            if not is_system_default:
+                if not business_id:
+                    messages.error(request, "Please select a registered business, or toggle 'Platform System Default'.")
+                    return redirect('analytics:admin_sender_ids')
+                business = get_object_or_404(Business, pk=business_id)
+
+            # Check duplication
+            if business and SenderID.objects.filter(business=business, sender_id=clean_sid).exists():
+                messages.warning(request, f"Sender ID '{clean_sid}' is already assigned to {business.name}.")
+                return redirect('analytics:admin_sender_ids')
+            elif is_system_default and SenderID.objects.filter(is_system_default=True, sender_id=clean_sid).exists():
+                messages.warning(request, f"Platform System Default Sender ID '{clean_sid}' already exists.")
+                return redirect('analytics:admin_sender_ids')
+
+            new_sid = SenderID.objects.create(
+                business=business,
+                sender_id=clean_sid,
+                purpose=purpose or f"Provisioned by Superadmin for {business.name if business else 'Platform'}",
+                status=initial_status,
+                is_system_default=is_system_default,
+                approved_at=timezone.now() if initial_status == SenderID.Status.APPROVED else None
+            )
+
+            if business and (not business.preferred_sender_id or initial_status == SenderID.Status.APPROVED):
+                business.preferred_sender_id = clean_sid
+                business.save(update_fields=['preferred_sender_id'])
+
+            target_label = business.name if business else "Platform-Wide Default"
+            AuditLog.objects.create(
+                business=business,
+                actor=request.user,
+                action='SENDER_ID_PROVISIONED',
+                description=f"Admin {request.user.email} provisioned Sender ID '{clean_sid}' ({initial_status}) for {target_label}"
+            )
+            messages.success(request, f"Sender ID '{clean_sid}' provisioned for {target_label}.")
+            return redirect('analytics:admin_sender_ids')
+
+        sid_id = request.POST.get('sender_id_id')
+        sid = get_object_or_404(SenderID, pk=sid_id)
+
+        if action == 'approve':
+            sid.status = SenderID.Status.APPROVED
+            sid.approved_at = timezone.now()
+            sid.save(update_fields=['status', 'approved_at'])
+            if sid.business and not sid.business.preferred_sender_id:
+                sid.business.preferred_sender_id = sid.sender_id
+                sid.business.save(update_fields=['preferred_sender_id'])
+            AuditLog.objects.create(
+                business=sid.business,
+                actor=request.user,
+                action='SENDER_ID_APPROVED',
+                description=f"Admin approved and activated Sender ID '{sid.sender_id}'"
+            )
+            messages.success(request, f"Sender ID '{sid.sender_id}' approved and activated for {sid.business.name if sid.business else 'Platform'}.")
+
+        elif action == 'reject':
+            reason = request.POST.get('reason', 'Administrative decision').strip()
+            sid.status = SenderID.Status.REJECTED
+            sid.rejection_reason = reason
+            sid.save(update_fields=['status', 'rejection_reason'])
+            AuditLog.objects.create(
+                business=sid.business,
+                actor=request.user,
+                action='SENDER_ID_REJECTED',
+                description=f"Admin rejected Sender ID '{sid.sender_id}': {reason}"
+            )
+            messages.warning(request, f"Sender ID '{sid.sender_id}' was rejected.")
+
+        elif action == 'delete':
+            sid_name = sid.sender_id
+            target_label = sid.business.name if sid.business else "Platform Default"
+            sid.delete()
+            AuditLog.objects.create(
+                business=sid.business,
+                actor=request.user,
+                action='SENDER_ID_DELETED',
+                description=f"Admin deleted Sender ID '{sid_name}' from {target_label}"
+            )
+            messages.info(request, f"Sender ID '{sid_name}' was removed.")
+
+        return redirect('analytics:admin_sender_ids')
 
 
 class AdminAuditLogListView(View):

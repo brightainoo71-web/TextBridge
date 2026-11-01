@@ -16,11 +16,14 @@
         <h4 class="fw-bold mb-0 text-dark tracking-tight fs-5 fs-md-4">Platform Financial & Telecommunications Command</h4>
     </div>
     <div class="d-flex flex-wrap gap-2">
-        <a href="{% url 'analytics:admin_business_list' %}" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1.5">
-            <i class="bi bi-buildings"></i> <span>Tenant Directory</span>
+        <a href="{% url 'analytics:admin_business_list' %}" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1.5 shadow-sm">
+            <i class="bi bi-buildings"></i> <span>Tenants</span>
         </a>
-        <a href="{% url 'analytics:admin_audit_logs' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1.5">
-            <i class="bi bi-journal-text"></i> <span>Platform Audit Trail</span>
+        <a href="{% url 'analytics:admin_sender_ids' %}" class="btn btn-primary btn-sm d-flex align-items-center gap-1.5 shadow-sm">
+            <i class="bi bi-tag"></i> <span>Sender IDs</span>
+        </a>
+        <a href="{% url 'analytics:admin_audit_logs' %}" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1.5 shadow-sm">
+            <i class="bi bi-journal-text"></i> <span>Audit Trail</span>
         </a>
     </div>
 </div>
