@@ -1,13 +1,42 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="tbGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#4f46e5"/>
-      <stop offset="100%" stop-color="#6366f1"/>
+    <!-- Dark Velvet Indigo Background -->
+    <linearGradient id="bgGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#020617"/>
+      <stop offset="100%" stop-color="#1E1B4B"/>
     </linearGradient>
+
+    <!-- Vibrant Gradient for T and B -->
+    <linearGradient id="tbLogoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="50%" stop-color="#818CF8"/>
+      <stop offset="100%" stop-color="#C084FC"/>
+    </linearGradient>
+
+    <filter id="monogramGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="18" flood-color="#818CF8" flood-opacity="0.4"/>
+    </filter>
   </defs>
-  <rect width="512" height="512" rx="112" fill="url(#tbGrad)"/>
-  <path d="M140 176c0-26.51 21.49-48 48-48h136c26.51 0 48 21.49 48 48v120c0 26.51-21.49 48-48 48h-88l-52 44c-6.84 5.79-17.15.93-17.15-8.08V344H188c-26.51 0-48-21.49-48-48V176z" fill="#ffffff"/>
-  <circle cx="216" cy="236" r="14" fill="#4f46e5"/>
-  <circle cx="256" cy="236" r="14" fill="#4f46e5"/>
-  <circle cx="296" cy="236" r="14" fill="#4f46e5"/>
+
+  <!-- Background Squircle -->
+  <rect width="512" height="512" rx="116" fill="url(#bgGrad3)"/>
+  <rect width="504" height="504" x="4" y="4" rx="112" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+
+  <!-- Sleek Interlocking 'TB' Monogram with Bridge Arch & Chat Curve -->
+  <g filter="url(#monogramGlow)" transform="translate(10, 0)">
+    <!-- Top Horizontal Crossbar (T Bridge) -->
+    <rect x="132" y="148" width="228" height="34" rx="17" fill="url(#tbLogoGrad)"/>
+
+    <!-- Vertical Stem -->
+    <rect x="228" y="148" width="34" height="216" rx="17" fill="url(#tbLogoGrad)"/>
+
+    <!-- 'B' Upper Loop Arch -->
+    <path d="M246 172 H316 C354 172, 378 196, 378 232 C378 264, 354 286, 316 286 H246" fill="none" stroke="url(#tbLogoGrad)" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- 'B' Lower Loop Arch -->
+    <path d="M246 286 H326 C368 286, 394 314, 394 350 C394 388, 364 416, 320 416 H192" fill="none" stroke="url(#tbLogoGrad)" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Real-time Connected Signal Dot -->
+    <circle cx="396" cy="156" r="16" fill="#38BDF8"/>
+  </g>
 </svg>

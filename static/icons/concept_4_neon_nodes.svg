@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <!-- Dark Slate Background -->
+    <linearGradient id="bgGrad4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0B0F19"/>
+      <stop offset="100%" stop-color="#1E293B"/>
+    </linearGradient>
+
+    <!-- Glowing Cyan / Violet Gradient -->
+    <linearGradient id="bubbleGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366F1"/>
+      <stop offset="100%" stop-color="#4F46E5"/>
+    </linearGradient>
+
+    <linearGradient id="bubbleGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+
+    <filter id="nodeGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="20" flood-color="#38BDF8" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Background Squircle -->
+  <rect width="512" height="512" rx="116" fill="url(#bgGrad4)"/>
+  <rect width="504" height="504" x="4" y="4" rx="112" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+
+  <!-- Intersecting Message Bridge Nodes -->
+  <g filter="url(#nodeGlow)">
+    <!-- Base Indigo Bubble -->
+    <rect x="112" y="152" width="232" height="154" rx="48" fill="url(#bubbleGrad1)" opacity="0.92"/>
+    <polygon points="152,306 128,348 184,306" fill="url(#bubbleGrad1)"/>
+    
+    <!-- Accent Electric Cyan Chat Node (Offset) -->
+    <rect x="184" y="218" width="224" height="150" rx="48" fill="url(#bubbleGrad2)"/>
+    <polygon points="364,368 392,408 340,368" fill="url(#bubbleGrad2)"/>
+
+    <!-- Signal Pulse Lines inside Cyan Node -->
+    <rect x="232" y="268" width="80" height="16" rx="8" fill="#FFFFFF"/>
+    <rect x="232" y="302" width="128" height="16" rx="8" fill="#FFFFFF" opacity="0.8"/>
+  </g>
+</svg>

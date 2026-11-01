@@ -29,9 +29,7 @@
         <div class="container-fluid px-lg-4">
             <!-- Brand Logo -->
             <a class="tb-brand-logo me-4" href="{% if user.is_authenticated %}{% url 'accounts:dashboard_redirect' %}{% else %}{% url 'landing' %}{% endif %}">
-                <div class="tb-brand-icon">
-                    <i class="bi bi-chat-square-quote-fill"></i>
-                </div>
+                <img src="{% static 'icons/icon.svg' %}" alt="TextBridge" style="width: 34px; height: 34px; border-radius: 9px; box-shadow: 0 4px 10px rgba(99,102,241,0.25);">
                 <div class="d-flex align-items-baseline">
                     <span class="fw-bold">Text</span><span class="text-primary fw-bolder">Bridge</span>
                 </div>

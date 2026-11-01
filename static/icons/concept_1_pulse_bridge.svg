@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090D16"/>
+      <stop offset="50%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#1E1B4B"/>
+    </linearGradient>
+    
+    <!-- Neon Beam Gradient -->
+    <linearGradient id="beamGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="50%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#8B5CF6"/>
+    </linearGradient>
+
+    <!-- Golden Delivery Glow -->
+    <linearGradient id="goldGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#06D6A0"/>
+    </linearGradient>
+
+    <!-- Drop Shadow -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#6366F1" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- App Icon Background Squircle -->
+  <rect width="512" height="512" rx="116" fill="url(#bgGrad1)"/>
+  <rect width="504" height="504" x="4" y="4" rx="112" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+
+  <!-- Glowing Bridge Waveform (Telecom Infrastructure) -->
+  <g filter="url(#glow)">
+    <!-- Bridge Arch -->
+    <path d="M96 348 C160 220, 352 220, 416 348" fill="none" stroke="url(#beamGrad)" stroke-width="28" stroke-linecap="round"/>
+    
+    <!-- Signal Bars / Telecom Pillars -->
+    <line x1="168" y1="334" x2="168" y2="280" stroke="#38BDF8" stroke-width="16" stroke-linecap="round" opacity="0.8"/>
+    <line x1="216" y1="316" x2="216" y2="236" stroke="#60A5FA" stroke-width="16" stroke-linecap="round"/>
+    <line x1="256" y1="304" x2="256" y2="210" stroke="#818CF8" stroke-width="18" stroke-linecap="round"/>
+    <line x1="296" y1="316" x2="296" y2="236" stroke="#A78BFA" stroke-width="16" stroke-linecap="round"/>
+    <line x1="344" y1="334" x2="344" y2="280" stroke="#C084FC" stroke-width="16" stroke-linecap="round" opacity="0.8"/>
+    
+    <!-- Telecom Transmission Pulse Node at Top -->
+    <circle cx="256" cy="156" r="22" fill="#FFFFFF"/>
+    <circle cx="256" cy="156" r="32" fill="none" stroke="#38BDF8" stroke-width="4" opacity="0.7"/>
+    <circle cx="256" cy="156" r="46" fill="none" stroke="#818CF8" stroke-width="3" opacity="0.4"/>
+  </g>
+</svg>

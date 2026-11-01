@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <!-- Deep Gradient -->
+    <linearGradient id="bgGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#1E1B4B"/>
+    </linearGradient>
+
+    <!-- Supersonic Jet Gradient -->
+    <linearGradient id="jetGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="40%" stop-color="#EEF2FF"/>
+      <stop offset="100%" stop-color="#C7D2FE"/>
+    </linearGradient>
+
+    <linearGradient id="wingShadow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366F1"/>
+      <stop offset="100%" stop-color="#4338CA"/>
+    </linearGradient>
+
+    <!-- Trail Gradient -->
+    <linearGradient id="trailGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06B6D4" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#3B82F6" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#6366F1" stop-opacity="1"/>
+    </linearGradient>
+
+    <filter id="jetGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="20" flood-color="#4F46E5" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Background Squircle -->
+  <rect width="512" height="512" rx="116" fill="url(#bgGrad2)"/>
+  <rect width="504" height="504" x="4" y="4" rx="112" fill="none" stroke="rgba(255,255,255,0.09)" stroke-width="2"/>
+
+  <!-- Orbital Horizon Bridge Arc -->
+  <path d="M72 384 C 180 280, 332 280, 440 384" fill="none" stroke="url(#trailGrad)" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="440" cy="384" r="7" fill="#38BDF8"/>
+  <circle cx="72" cy="384" r="7" fill="#6366F1"/>
+
+  <!-- Dynamic Messenger Jet (Faceted Precision) -->
+  <g filter="url(#jetGlow)" transform="translate(18, -12)">
+    <!-- Right Wing Main -->
+    <polygon points="238,136 396,252 238,296" fill="url(#jetGrad)"/>
+    <!-- Left Wing Shadow -->
+    <polygon points="238,136 128,296 238,296" fill="url(#wingShadow)"/>
+    <!-- Fold Keel -->
+    <polygon points="238,296 238,368 284,310" fill="#312E81"/>
+    <polygon points="238,296 238,368 214,324" fill="#1E1B4B"/>
+    <!-- Cockpit / Spark Core -->
+    <circle cx="238" cy="136" r="14" fill="#38BDF8"/>
+  </g>
+</svg>
