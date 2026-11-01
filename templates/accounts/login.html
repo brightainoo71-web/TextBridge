@@ -19,22 +19,6 @@
                 <p class="text-secondary small">Access your <span class="fw-semibold text-primary">TextBridge</span> workspace</p>
             </div>
 
-            <!-- Fast-Fill Demo Credentials Helper (Helpful for Evaluation) -->
-            <div class="p-3 mb-4 rounded-3 border bg-light small">
-                <div class="d-flex justify-content-between align-items-center mb-1.5">
-                    <span class="text-uppercase fw-bold text-muted" style="font-size: 0.65rem; letter-spacing: 0.05em;">Demo Sandbox Access</span>
-                    <span class="badge bg-success-subtle text-success border border-success-subtle font-mono" style="font-size: 0.65rem;">Active</span>
-                </div>
-                <div class="d-flex justify-content-between align-items-center py-1">
-                    <span class="font-mono text-dark" style="font-size: 0.775rem;">owner@ironfitgym.com</span>
-                    <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2 font-mono" style="font-size: 0.7rem;" onclick="fillDemo('owner@ironfitgym.com', 'GymOwner123!')">Fill</button>
-                </div>
-                <div class="d-flex justify-content-between align-items-center py-1 border-top mt-1 pt-1">
-                    <span class="font-mono text-dark" style="font-size: 0.775rem;">admin@brightsms.com</span>
-                    <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2 font-mono" style="font-size: 0.7rem;" onclick="fillDemo('admin@brightsms.com', 'Admin12345!')">Fill Admin</button>
-                </div>
-            </div>
-
             <form method="post" novalidate>
                 {% csrf_token %}
 
@@ -85,11 +69,4 @@
         </div>
     </div>
 </div>
-
-<script>
-function fillDemo(email, pass) {
-    document.getElementById('emailInput').value = email;
-    document.getElementById('passwordInput').value = pass;
-}
-</script>
 {% endblock %}

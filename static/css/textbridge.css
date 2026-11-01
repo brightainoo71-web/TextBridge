@@ -487,13 +487,27 @@ h1, h2, h3, h4, h5, h6 {
 /* Responsive Overrides & Mobile HCI Ergonomics */
 @media (max-width: 991.98px) {
     body.has-bottom-nav {
-        padding-bottom: 76px !important;
+        padding-bottom: 84px !important;
+    }
+
+    /* Fixed Viewport Dropdown Positioning for Mobile */
+    .tb-navbar .dropdown-menu {
+        position: absolute !important;
+        right: 12px !important;
+        left: auto !important;
+        max-width: calc(100vw - 24px) !important;
+        top: 100% !important;
+        margin-top: 8px !important;
     }
 
     .tb-sidebar {
         min-height: auto;
         border-right: none;
         border-bottom: 1px solid var(--tb-slate-200);
+    }
+
+    .tb-stat-value {
+        font-size: 1.45rem !important;
     }
 
     /* iOS Safari Auto-Zoom Fix (HCI: inputs must be >= 16px font-size to prevent jump) */
